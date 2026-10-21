@@ -3,13 +3,13 @@ import { Link, useParams } from "react-router-dom";
 import { useProjectRepository } from "@/features/projects/repositories/RepositoryContext";
 import { getProject } from "@/features/projects/services/projectService";
 import type { FrameProject } from "@/features/document/model";
+import { EditorShell } from "@/features/editor/components/EditorShell";
 
 /**
- * Phase 1 route for `/editor/:projectId`.
- *
- * Verifies end-to-end persistence by loading the saved project. The actual
- * editor shell (toolbar, sidebars, canvas) is Phase 2; nothing here pretends
- * to be editable. Missing and corrupt projects get clear recovery messages.
+ * `/editor/:projectId` — loads the persisted project and mounts the editor
+ * shell (Phase 2). Missing and damaged projects get explicit recovery states
+ * instead of a broken editor. Nothing pretends: if validation fails, the
+ * stored copy is untouched and the user is told.
  */
 export default function EditorRoute() {
   const { projectId = "" } = useParams();
@@ -36,6 +36,16 @@ export default function EditorRoute() {
       cancelled = true;
     };
   }, [repository, projectId]);
+
+  if (state.status === "ready" && state.project !== null) {
+    return (
+      <EditorShell
+        project={state.project}
+        repository={repository}
+        onProjectChanged={(project) => setState({ status: "ready", project })}
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-900">
@@ -83,34 +93,6 @@ export default function EditorRoute() {
               Go to dashboard
             </Link>
           </div>
-        )}
-
-        {state.status === "ready" && state.project !== null && (
-          <section>
-            <h1 className="text-xl font-semibold tracking-tight" data-testid="editor-project-name">
-              {state.project.name}
-            </h1>
-            {state.project.description ? (
-              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                {state.project.description}
-              </p>
-            ) : null}
-            <h2 className="mt-6 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Pages
-            </h2>
-            <ul className="mt-2 divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
-              {state.project.pages.map((page) => (
-                <li key={page.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                  <span data-testid="editor-page-name">{page.name}</span>
-                  <span className="text-xs text-zinc-400">/{page.slug}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4 text-xs text-zinc-400">
-              The visual editor (canvas, component library, inspector) is built in Phase 2 of the
-              implementation plan.
-            </p>
-          </section>
         )}
       </main>
     </div>

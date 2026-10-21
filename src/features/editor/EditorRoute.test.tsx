@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
+// Provides IndexedDB in jsdom; must load before Dexie touches `indexedDB`.
 import "fake-indexeddb/auto";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -22,29 +23,34 @@ function renderEditor(dbName: string, projectId: string) {
   return { repository, utils };
 }
 
-describe("EditorRoute (Phase 1 persistence route)", () => {
+describe("EditorRoute", () => {
   it("shows an explicit not-found state for a missing project", async () => {
     renderEditor("editor-missing", "no-such-id");
 
     expect(await screen.findByText("Project not found")).toBeInTheDocument();
   });
 
-  it("loads a saved project with its page list", async () => {
+  it("mounts the editor shell from a freshly loaded saved project", async () => {
     const dbName = "editor-saved";
-    const seeded = renderEditor(dbName, "any");
-    const utils = seeded.utils;
-    const project = await createProject(seeded.repository, { name: "Portfolio Website" });
-
-    // Reload the route freshly to prove load-from-storage.
-    utils.unmount();
+    // Seed storage directly, then mount the route to prove load-from-storage.
+    const repository = new DexieProjectRepository(dbName);
+    const project = await createProject(repository, { name: "Portfolio Website" });
     renderEditor(dbName, project.id);
 
-    await waitFor(async () => {
-      expect(await screen.findByTestId("editor-project-name")).toHaveTextContent(
-        "Portfolio Website",
-      );
-    });
-    expect(screen.getAllByTestId("editor-page-name")[0]).toHaveTextContent("Portfolio Website");
+    expect(await screen.findByRole("button", { name: "Portfolio Website" })).toBeInTheDocument();
+    expect(screen.getByTestId("canvas-workspace")).toBeInTheDocument();
+    const pageSelect = screen.getByRole("combobox", { name: /current page/i });
+    expect(pageSelect).toHaveValue(project.pages[0]?.id ?? "");
+  });
+
+  it("shows the damaged-data recovery state for an invalid record", async () => {
+    const dbName = "editor-damaged";
+    const repository = new DexieProjectRepository(dbName);
+    await repository.rawPutForTests({ id: "broken", name: "Broken", pages: "not-a-list" });
+
+    renderEditor(dbName, "broken");
+
+    expect(await screen.findByText("This project’s data is damaged")).toBeInTheDocument();
   });
 
   it("navigates back to the dashboard from the not-found state", async () => {

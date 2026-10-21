@@ -49,8 +49,10 @@ describe("DashboardPage (integration over IndexedDB)", () => {
     await user.type(screen.getByPlaceholderText("Portfolio Website"), "My First Site");
     await user.click(screen.getByRole("button", { name: /create project/i }));
 
-    // Creation navigates to the editor route, which loads the saved page.
-    expect(await screen.findByTestId("editor-project-name")).toHaveTextContent("My First Site");
+    // Creation navigates to the editor route, which loads the saved project
+    // into the Phase 2 shell (the name lives in the toolbar).
+    expect(await screen.findByRole("button", { name: "My First Site" })).toBeInTheDocument();
+    expect(screen.getByTestId("canvas-workspace")).toBeInTheDocument();
 
     // Returning to the dashboard shows the persisted card.
     await user.click(screen.getByRole("link", { name: /back to projects/i }));
