@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/*
+  Frame design tokens (Phase 0 placeholder).
+  Phase 1+ will build the theme system (light/dark) on top of these.
+*/
+:root {
+  --frame-bg: #fafafa;
+  --frame-chrome-border: #e4e4e7;
+  --frame-text: #18181b;
+  --frame-accent: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --frame-bg: #18181b;
+    --frame-chrome-border: #27272a;
+    --frame-text: #fafafa;
+    --frame-accent: #3b82f6;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--frame-bg);
+  color: var(--frame-text);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
