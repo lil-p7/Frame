@@ -1,5 +1,6 @@
 import type { ComponentDefinition } from "@/features/component-registry/types";
 import { COMPONENT_CATEGORIES } from "@/features/component-registry/types";
+import { ROOT_NODE_TYPE } from "@/features/document/model";
 import {
   containerComponent,
   gridComponent,
@@ -78,4 +79,18 @@ export function isRegisteredType(type: string): boolean {
 /** All definitions, optionally filtered by library category (Phase 4). */
 export function listComponents(category?: ComponentDefinition["category"]): ComponentDefinition[] {
   return COMPONENT_DEFINITIONS.filter((def) => category === undefined || def.category === category);
+}
+
+/**
+ * Whether a parent of `parentType` (or the page root) accepts a child of
+ * `childType`, per its definition (spec §9A insertion rules, §15 drop-target
+ * validation). Shared by click insertion and drag-and-drop resolution.
+ */
+export function parentAllowsChild(parentType: string, childType: string): boolean {
+  if (parentType === ROOT_NODE_TYPE) return true;
+  const definition = getComponent(parentType);
+  if (definition === undefined || !definition.acceptsChildren) return false;
+  return (
+    definition.allowedChildTypes === null || definition.allowedChildTypes.includes(childType)
+  );
 }

@@ -163,6 +163,7 @@ export function EditorToolbar({
         )}
 
         <span
+          data-testid="save-status"
           className={cn(
             "inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px]",
             saveStatus === "saved" && "text-zinc-500 dark:text-zinc-400",

@@ -1,12 +1,18 @@
 import type { RefObject } from "react";
+import { GripVertical } from "lucide-react";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { ROOT_NODE_TYPE, type FrameNode, type FramePage } from "@/features/document/model";
 import { getComponent } from "@/features/component-registry/registry";
+import type { DragPayload } from "@/features/editor/dnd/dropResolution";
 import { resolveViewportWidth, useEditorStore } from "@/features/editor/stores/editorStore";
+import { cn } from "@/lib/cn";
 
 interface CanvasWorkspaceProps {
   page: FramePage;
   /** Shared so the toolbar's "fit" control can measure the visible area. */
   scrollerRef: RefObject<HTMLDivElement | null>;
+  /** Optional click-to-insert action for the empty-canvas call to action (spec §10). */
+  onInsertFirstSection?: () => void;
 }
 
 /**
@@ -21,13 +27,23 @@ interface CanvasWorkspaceProps {
  * Zoom uses the CSS `zoom` property: the document frame keeps its declared
  * width (Phase 2 acceptance), only presentation scales.
  */
-export function CanvasWorkspace({ page, scrollerRef }: CanvasWorkspaceProps) {
+export function CanvasWorkspace({ page, scrollerRef, onInsertFirstSection }: CanvasWorkspaceProps) {
   const viewportSelection = useEditorStore((s) => s.viewportSelection);
   const customViewportWidth = useEditorStore((s) => s.customViewportWidth);
   const zoom = useEditorStore((s) => s.zoom);
   const selectNode = useEditorStore((s) => s.selectNode);
+  const drag = useEditorStore((s) => s.drag);
 
   const viewportWidth = resolveViewportWidth({ viewportSelection, customViewportWidth });
+
+  // The whole page boundary is a droppable zone: drops on empty pages,
+  // padding, or between children resolve through it (spec §10, §15).
+  const { setNodeRef: setPageDroppableRef } = useDroppable({
+    id: "canvas-page",
+    data: { zone: "canvas", nodeId: page.root.id },
+  });
+  const pageZoneActive =
+    drag.zone === "canvas" && drag.overNodeId === page.root.id && drag.valid;
 
   return (
     <div
@@ -43,13 +59,18 @@ export function CanvasWorkspace({ page, scrollerRef }: CanvasWorkspaceProps) {
         the editor presentation (the specified width never changes).
       */}
       <div
+        ref={setPageDroppableRef}
         data-testid="document-viewport"
         style={{
           width: `${viewportWidth}px`,
           zoom,
           backgroundColor: page.settings.backgroundColor,
         }}
-        className="min-h-[640px] shrink-0 shadow-lg ring-1 ring-zinc-300/80 dark:ring-zinc-700"
+        className={cn(
+          "min-h-[640px] shrink-0 shadow-lg ring-1 ring-zinc-300/80 dark:ring-zinc-700",
+          // Drop indicator: "lands at the end of the page" (§15).
+          pageZoneActive && "ring-2 ring-blue-500/70",
+        )}
       >
         {page.root.children.length === 0 ? (
           <div
@@ -60,9 +81,18 @@ export function CanvasWorkspace({ page, scrollerRef }: CanvasWorkspaceProps) {
               This page is empty
             </p>
             <p className="max-w-sm text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Components can be added from the Components tab in the left sidebar once the component
-              library ships (Phase 4). Dropping onto this canvas will work then too.
+              Add components from the Components tab in the left sidebar, or start with a section:
             </p>
+            {onInsertFirstSection !== undefined && (
+              <button
+                type="button"
+                data-testid="canvas-insert-section"
+                onClick={onInsertFirstSection}
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              >
+                Insert a section
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex min-h-[640px] flex-col gap-2 p-4" data-testid="canvas-document">
@@ -86,6 +116,13 @@ function CanvasNodeView({ node }: { node: FrameNode }) {
   const hoveredNodeId = useEditorStore((s) => s.hoveredNodeId);
   const selectNode = useEditorStore((s) => s.selectNode);
   const setHoveredNode = useEditorStore((s) => s.setHoveredNode);
+  const drag = useEditorStore((s) => s.drag);
+
+  // Every visible node is a droppable zone (spec §15 explicit drop zones).
+  const { setNodeRef: setDroppableRef } = useDroppable({
+    id: `canvas-node:${node.id}`,
+    data: { zone: "canvas", nodeId: node.id },
+  });
 
   // Hidden components never appear on the canvas (spec §9C).
   if (node.editor.hidden) return null;
@@ -96,6 +133,12 @@ function CanvasNodeView({ node }: { node: FrameNode }) {
   // The root container is structural; locked components ignore ordinary
   // canvas clicks (spec §10 selection behavior).
   const selectable = node.type !== ROOT_NODE_TYPE && !node.editor.locked;
+
+  // Insertion indicator for the component the drag is currently over (§15).
+  // The store holds the *effective* band, already degraded to the nearer
+  // edge for targets that cannot receive children.
+  const dropTargeted = drag.zone === "canvas" && drag.overNodeId === node.id && drag.valid;
+  const indicator = dropTargeted ? drag.band : null;
 
   const children = definition?.acceptsChildren
     ? node.children.map((child) => <CanvasNodeView key={child.id} node={child} />)
@@ -110,6 +153,7 @@ function CanvasNodeView({ node }: { node: FrameNode }) {
 
   return (
     <div
+      ref={setDroppableRef}
       data-testid="canvas-node"
       data-node-id={node.id}
       data-node-type={node.type}
@@ -133,13 +177,52 @@ function CanvasNodeView({ node }: { node: FrameNode }) {
       {(selected || hovered) && (
         <span
           data-testid="canvas-node-label"
-          className="pointer-events-none absolute -top-2.5 left-2 z-10 rounded bg-zinc-900/85 px-1.5 py-px text-[10px] font-medium text-zinc-100"
+          className="absolute -top-2.5 left-2 z-10 flex items-center gap-0.5 rounded bg-zinc-900/85 px-1.5 py-px text-[10px] font-medium text-zinc-100"
         >
-          {node.name}
+          {selectable && <CanvasDragHandle node={node} />}
+          <span className="pointer-events-none">{node.name}</span>
         </span>
+      )}
+      {indicator !== null && (
+        <span
+          data-testid={`canvas-drop-${indicator}`}
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute left-0 right-0 z-20 rounded bg-blue-500",
+            indicator === "before" && "-top-1 h-1",
+            indicator === "after" && "-bottom-1 h-1",
+            indicator === "inside" &&
+              "inset-0 h-auto rounded-sm bg-transparent ring-2 ring-blue-500/70",
+          )}
+        />
       )}
       {content}
     </div>
+  );
+}
+
+/**
+ * Drag handle on the node label (spec §10, §15 "drag handles should be
+ * available where needed"): only the handle starts a node drag, so text
+ * selection and ordinary clicks on the component itself keep working.
+ */
+function CanvasDragHandle({ node }: { node: FrameNode }) {
+  const { attributes, listeners, setActivatorNodeRef } = useDraggable({
+    id: `canvas-handle:${node.id}`,
+    data: { kind: "node", nodeId: node.id } satisfies DragPayload,
+  });
+  return (
+    <button
+      type="button"
+      ref={setActivatorNodeRef}
+      data-testid="canvas-drag-handle"
+      aria-label={`Drag ${node.name}`}
+      {...listeners}
+      {...attributes}
+      className="cursor-grab touch-none rounded px-0.5 text-zinc-300 hover:text-white active:cursor-grabbing"
+    >
+      <GripVertical className="h-3 w-3" aria-hidden="true" />
+    </button>
   );
 }
 

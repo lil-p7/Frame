@@ -1,5 +1,15 @@
+import { Box, Grid3x3, List, MoveVertical, RectangleHorizontal } from "lucide-react";
 import { createElement } from "react";
 import { z } from "zod";
+import {
+  ALIGN_ITEMS_OPTIONS,
+  DISPLAY_OPTIONS,
+  FLEX_DIRECTION_OPTIONS,
+  FLEX_WRAP_OPTIONS,
+  JUSTIFY_CONTENT_OPTIONS,
+  TEXT_ALIGN_OPTIONS,
+  field,
+} from "@/features/component-registry/inspector";
 import { defineComponent } from "@/features/component-registry/define";
 import { stylesToCss } from "@/features/component-registry/styles";
 import { enumProp } from "@/features/component-registry/props";
@@ -12,10 +22,26 @@ export const sectionComponent = defineComponent({
   label: "Section",
   category: "layout",
   description: "Semantic section container that groups page content.",
+  icon: RectangleHorizontal,
   acceptsChildren: true,
   propSchema: z.object({ tag: z.enum(SECTION_TAGS) }),
   defaultProps: { tag: "section" },
   defaultStyles: () => ({ padding: 24, minHeight: 96 }),
+  controls: [
+    field.propSelect(
+      "tag",
+      "Semantic type",
+      SECTION_TAGS.map((tag) => ({
+        value: tag,
+        label: tag.charAt(0).toUpperCase() + tag.slice(1),
+      })),
+    ),
+    field.styleUnit("padding", "Padding"),
+    field.styleUnit("width", "Width"),
+    field.styleUnit("minHeight", "Min height"),
+    field.styleSelect("textAlign", "Text alignment", TEXT_ALIGN_OPTIONS),
+    field.styleColor("backgroundColor", "Background"),
+  ],
   renderEditor: (node, children) => {
     const tag = enumProp(node.props, "tag", SECTION_TAGS, "section");
     return createElement(
@@ -32,6 +58,7 @@ export const containerComponent = defineComponent({
   label: "Container",
   category: "layout",
   description: "Centers and bounds content with a maximum width.",
+  icon: Box,
   acceptsChildren: true,
   propSchema: z.object({}),
   defaultStyles: () => ({
@@ -40,6 +67,15 @@ export const containerComponent = defineComponent({
     marginRight: "auto",
     padding: 16,
   }),
+  controls: [
+    field.styleUnit("width", "Width"),
+    field.styleUnit("maxWidth", "Max width"),
+    field.styleUnit("padding", "Padding"),
+    field.styleUnit("gap", "Gap"),
+    field.styleSelect("alignItems", "Align children", ALIGN_ITEMS_OPTIONS),
+    field.styleSelect("justifyContent", "Justify", JUSTIFY_CONTENT_OPTIONS),
+    field.styleColor("backgroundColor", "Background"),
+  ],
   renderEditor: (node, children) => (
     <div style={stylesToCss(node.styles)} data-component="container">
       {children}
@@ -53,9 +89,19 @@ export const stackComponent = defineComponent({
   label: "Stack",
   category: "layout",
   description: "Arranges children in a row or column with gap and alignment.",
+  icon: List,
   acceptsChildren: true,
   propSchema: z.object({}),
   defaultStyles: () => ({ display: "flex", flexDirection: "column", gap: 16 }),
+  controls: [
+    field.styleSelect("flexDirection", "Direction", FLEX_DIRECTION_OPTIONS),
+    field.styleSelect("alignItems", "Align children", ALIGN_ITEMS_OPTIONS),
+    field.styleSelect("justifyContent", "Justify", JUSTIFY_CONTENT_OPTIONS),
+    field.styleSelect("flexWrap", "Wrapping", FLEX_WRAP_OPTIONS),
+    field.styleUnit("gap", "Gap"),
+    field.styleUnit("padding", "Padding"),
+    field.styleSelect("display", "Display mode", DISPLAY_OPTIONS),
+  ],
   renderEditor: (node, children) => (
     <div style={stylesToCss(node.styles)} data-component="stack">
       {children}
@@ -69,6 +115,7 @@ export const gridComponent = defineComponent({
   label: "Grid",
   category: "layout",
   description: "Arranges children in columns and rows.",
+  icon: Grid3x3,
   acceptsChildren: true,
   propSchema: z.object({}),
   defaultStyles: () => ({
@@ -76,6 +123,12 @@ export const gridComponent = defineComponent({
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: 16,
   }),
+  controls: [
+    field.styleColumns("gridTemplateColumns", "Columns"),
+    field.styleUnit("gap", "Gap"),
+    field.styleUnit("padding", "Padding"),
+    field.styleColor("backgroundColor", "Background"),
+  ],
   renderEditor: (node, children) => (
     <div style={stylesToCss(node.styles)} data-component="grid">
       {children}
@@ -89,9 +142,11 @@ export const spacerComponent = defineComponent({
   label: "Spacer",
   category: "layout",
   description: "Adds intentional empty space between siblings.",
+  icon: MoveVertical,
   acceptsChildren: false,
   propSchema: z.object({}),
   defaultStyles: () => ({ height: 24 }),
+  controls: [field.styleUnit("height", "Height"), field.styleUnit("width", "Width")],
   renderEditor: (node) => (
     <div
       aria-hidden="true"

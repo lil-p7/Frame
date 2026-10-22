@@ -7,6 +7,7 @@ import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 import { routes } from "@/app/router";
 import type { FrameNode, FrameProject } from "@/features/document/model";
+import { getComponent } from "@/features/component-registry/registry";
 import { RepositoryContext } from "@/features/projects/repositories/RepositoryContext";
 import { DexieProjectRepository } from "@/features/projects/repositories/projectRepository";
 import { createProject } from "@/features/projects/services/projectService";
@@ -17,11 +18,21 @@ import {
 } from "@/features/editor/stores/editorStore";
 
 function makeNode(id: string, name: string, children: FrameNode[] = []): FrameNode {
+  return makeTypedNode(id, name, "section", children);
+}
+
+/** Builds a node whose props satisfy the registered schema (spec §12). */
+function makeTypedNode(
+  id: string,
+  name: string,
+  type: string,
+  children: FrameNode[] = [],
+): FrameNode {
   return {
     id,
-    type: "section",
+    type,
     name,
-    props: {},
+    props: getComponent(type)!.createDefaultProps(),
     styles: {},
     children,
     editor: { hidden: false, locked: false },
@@ -75,7 +86,7 @@ describe("EditorShell layout", () => {
     expect(screen.getByRole("complementary", { name: "Properties inspector" })).toBeInTheDocument();
     expect(screen.getByTestId("canvas-workspace")).toBeInTheDocument();
     expect(screen.getByTestId("editor-status-bar")).toHaveTextContent("1440px · 100%");
-    expect(screen.getByRole("status")).toHaveTextContent("Saved");
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Saved");
     expect(screen.getByRole("combobox", { name: /current page/i })).toBeInTheDocument();
   });
 
@@ -262,7 +273,7 @@ describe("project name and pages in the toolbar", () => {
     await user.type(input, "New Name{Enter}");
 
     expect(await screen.findByRole("button", { name: "New Name" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Saved");
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Saved");
 
     // Reopen the route from storage: the new name survived.
     renderEditor(dbName, project.id).utils.unmount();
@@ -284,18 +295,265 @@ describe("project name and pages in the toolbar", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Project name is required.");
     expect(screen.getByRole("textbox", { name: "Project name" })).toBeInTheDocument();
   });
+});
 
-  it("offers an honest component library state instead of fake items", async () => {
+describe("component library and layer tree (Phase 4)", () => {
+  function rowByNodeId(nodeId: string): HTMLElement {
+    const row = screen
+      .getAllByTestId("layer-row")
+      .find((candidate) => candidate.getAttribute("data-node-id") === nodeId);
+    if (row === undefined) throw new Error(`layer row not found: ${nodeId}`);
+    return row;
+  }
+
+  async function openComponentsTab(sidebarLabel = "Components and layers") {
     const user = userEvent.setup();
-    const dbName = "shell-components-tab";
-    const project = await seedProject(dbName, "Tabs Demo", []);
-    renderEditor(dbName, project.id);
-
-    await screen.findByRole("button", { name: "Tabs Demo" });
-    const sidebar = screen.getByRole("complementary", { name: "Components and layers" });
+    const sidebar = screen.getByRole("complementary", { name: sidebarLabel });
     await user.click(within(sidebar).getByRole("tab", { name: /components/i }));
-    expect(within(sidebar).getByText(/nothing would work yet/i)).toBeInTheDocument();
-    // No button inside the library pretends to insert a component.
-    expect(within(sidebar).queryByRole("button", { name: /layout|text|media/i })).toBeNull();
+    return sidebar;
+  }
+
+  it("inserts a component from the library, selects it, and persists it", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-library-insert";
+    const project = await seedProject(dbName, "Library Insert", []);
+    const firstRender = renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Library Insert" });
+
+    await openComponentsTab();
+    await user.click(screen.getByRole("button", { name: "Insert Section" }));
+
+    // Canvas and layer tree both show the new node.
+    const inserted = await waitFor(() => {
+      const node = document.querySelector('[data-testid="canvas-node"][data-node-type="section"]');
+      expect(node).not.toBeNull();
+      return node as HTMLElement;
+    });
+    expect(inserted).toHaveAttribute("data-selected", "true");
+
+    // The layer tree shows the new node too (switch back to the Layers tab).
+    await user.click(screen.getByRole("tab", { name: /layers/i }));
+    const row = await waitFor(() => {
+      const found = screen
+        .getAllByTestId("layer-row")
+        .find((r) => r.querySelector('[data-testid="layer-row-name"]')?.textContent === "Section");
+      expect(found).toBeDefined();
+      return found as HTMLElement;
+    });
+    expect(row).toHaveAttribute("aria-selected", "true");
+    // The inspector follows the inserted component (spec §9A).
+    expect(screen.getByTestId("inspector-node-name")).toHaveTextContent("Section");
+
+    // Persistence: reopening the project shows the inserted section.
+    firstRender.utils.unmount();
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Library Insert" });
+    const rows = await screen.findAllByTestId("layer-row");
+    expect(
+      rows.some(
+        (r) => r.querySelector('[data-testid="layer-row-name"]')?.textContent === "Section",
+      ),
+    ).toBe(true);
+  });
+
+  it("inserts beside a leaf selection under its parent, and respects container selection", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-insert-targets";
+    const project = await seedProject(dbName, "Insert Targets", [
+      // "heading" is a true leaf: inserting beside it exercises the
+      // nearest-valid-parent rule, not nesting into the selection.
+      makeNode("node-hero", "Hero", [makeTypedNode("node-heading", "Heading", "heading")]),
+    ]);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Insert Targets" });
+
+    // With a leaf selected, the insert lands beside it (spec §9A).
+    await user.click(rowByNodeId("node-heading"));
+    await openComponentsTab();
+    await user.click(screen.getByRole("button", { name: "Insert Paragraph" }));
+    // Switch back to the Layers tab to inspect the document tree.
+    await user.click(screen.getByRole("tab", { name: /layers/i }));
+    const level3Rows = await waitFor(() => {
+      const rows = screen
+        .getAllByTestId("layer-row")
+        .filter((r) => r.getAttribute("aria-level") === "3");
+      expect(rows).toHaveLength(2);
+      return rows.map((r) => r.querySelector('[data-testid="layer-row-name"]')?.textContent);
+    });
+    expect(level3Rows).toEqual(["Heading", "Paragraph"]);
+
+    // When the selection is a container, the component becomes its child.
+    await user.click(rowByNodeId("node-hero"));
+    await openComponentsTab();
+    await user.click(screen.getByRole("button", { name: "Insert Container" }));
+    await user.click(screen.getByRole("tab", { name: /layers/i }));
+    await waitFor(() => {
+      const rows = screen
+        .getAllByTestId("layer-row")
+        .filter((r) => r.getAttribute("aria-level") === "3");
+      expect(
+        rows.map((r) => r.querySelector('[data-testid="layer-row-name"]')?.textContent),
+      ).toEqual(["Heading", "Paragraph", "Container"]);
+    });
+  });
+
+  it("renames a layer without touching its content and persists the rename", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-layer-rename";
+    const project = await seedProject(dbName, "Layer Rename", [
+      makeTypedNode("node-hero", "Hero", "stack", [
+        makeTypedNode("node-heading", "Heading", "heading"),
+      ]),
+    ]);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Layer Rename" });
+
+    await user.click(rowByNodeId("node-heading"));
+    await user.click(within(rowByNodeId("node-heading")).getByTestId("layer-rename"));
+    const input = screen.getByTestId("layer-rename-input");
+    await user.clear(input);
+    await user.type(input, "Intro heading{Enter}");
+
+    // The rename lands once the command + save complete.
+    await waitFor(() => expect(rowByNodeId("node-heading").textContent).toContain("Intro heading"));
+    // The rendered content prop is untouched by a rename (spec §9C).
+    expect(document.querySelector("[data-testid='canvas-document']")?.textContent).toContain(
+      "Heading",
+    );
+
+    renderEditor(dbName, project.id).utils.unmount();
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Layer Rename" });
+    expect(
+      (await screen.findAllByTestId("layer-row")).some(
+        (r) => r.querySelector('[data-testid="layer-row-name"]')?.textContent === "Intro heading",
+      ),
+    ).toBe(true);
+  });
+
+  it("duplicates a layer with fresh IDs and selects the copy", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-layer-duplicate";
+    const project = await seedProject(dbName, "Layer Duplicate", [makeNode("node-hero", "Hero")]);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Layer Duplicate" });
+
+    await user.click(rowByNodeId("node-hero"));
+    await user.click(within(rowByNodeId("node-hero")).getByTestId("layer-duplicate"));
+
+    const rows = await waitFor(() => {
+      const matching = screen
+        .getAllByTestId("layer-row")
+        .filter((r) => r.getAttribute("aria-level") === "2");
+      expect(matching).toHaveLength(2);
+      return matching;
+    });
+    const ids = rows.map((r) => r.getAttribute("data-node-id"));
+    expect(ids[0]).toBe("node-hero");
+    expect(ids[1]).not.toBe("node-hero"); // fresh ID throughout the copied subtree
+    expect(rows[1]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("deletes a parent with its whole subtree and moves the selection to the parent safely", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-layer-delete";
+    const project = await seedProject(dbName, "Layer Delete", [
+      makeNode("node-hero", "Hero", [
+        makeNode("node-heading", "Heading"),
+        makeNode("node-footer", "Footer"),
+      ]),
+    ]);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Layer Delete" });
+
+    // Delete the section's child subtree wholesale from a child selection.
+    await user.click(rowByNodeId("node-heading"));
+    await user.click(within(rowByNodeId("node-footer")).getByTestId("layer-delete"));
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getAllByTestId("layer-row")
+          .some((r) => r.getAttribute("data-node-id") === "node-footer"),
+      ).toBe(false);
+    });
+    expect(
+      document.querySelector('[data-testid="canvas-node"][data-node-id="node-footer"]'),
+    ).toBeNull();
+    // The heading selection was untouched — it is not inside the deleted subtree.
+    expect(screen.getByTestId("inspector-node-name")).toHaveTextContent("Heading");
+
+    // Deleting the selection's own subtree parks the selection on the parent.
+    await user.click(within(rowByNodeId("node-hero")).getByTestId("layer-delete"));
+    await waitFor(() => expect(screen.getByTestId("inspector-empty")).toBeInTheDocument());
+    expect(screen.getByTestId("inspector-empty")).toHaveTextContent("Nothing selected");
+  });
+
+  it("hides and shows a layer from the tree without destroying it", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-layer-visibility";
+    const project = await seedProject(dbName, "Layer Visibility", [makeNode("node-hero", "Hero")]);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Layer Visibility" });
+
+    await user.click(rowByNodeId("node-hero"));
+    await user.click(within(rowByNodeId("node-hero")).getByTestId("layer-visibility"));
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-node-id="node-hero"][data-testid="canvas-node"]'),
+      ).toBeNull(); // hidden on canvas (spec §9C)
+    });
+    expect(rowByNodeId("node-hero").getAttribute("aria-selected")).toBe("true");
+
+    // Show again: identical node ID renders once more.
+    await user.click(within(rowByNodeId("node-hero")).getByTestId("layer-visibility"));
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-node-id="node-hero"][data-testid="canvas-node"]'),
+      ).not.toBeNull();
+    });
+  });
+
+  it("locks a component: canvas clicks ignore it, the layer tree still selects it", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-layer-lock";
+    const project = await seedProject(dbName, "Layer Lock", [makeNode("node-hero", "Hero")]);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Layer Lock" });
+
+    await user.click(within(rowByNodeId("node-hero")).getByTestId("layer-lock"));
+
+    // Locked: canvas click does not select (spec §9C)…
+    await user.click(
+      document.querySelector('[data-testid="canvas-node"][data-node-id="node-hero"]')!,
+    );
+    expect(rowByNodeId("node-hero")).toHaveAttribute("aria-selected", "false");
+    // …but the layer tree can still select it, where the unlock control lives.
+    await user.click(rowByNodeId("node-hero"));
+    expect(rowByNodeId("node-hero")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("inspector-node-name")).toHaveTextContent("Hero");
+
+    // Unlock restores ordinary canvas selection.
+    await user.click(within(rowByNodeId("node-hero")).getByTestId("layer-lock"));
+    await user.click(
+      document.querySelector('[data-testid="canvas-node"][data-node-id="node-hero"]')!,
+    );
+    expect(rowByNodeId("node-hero")).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("filters the library with the search field", async () => {
+    const dbName = "shell-library-search";
+    const project = await seedProject(dbName, "Library Search", []);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "Library Search" });
+
+    await openComponentsTab();
+    expect(screen.getAllByTestId("library-item").length).toBeGreaterThan(10);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("searchbox", { name: "Search components" }), "spacer");
+    const visible = screen.getAllByTestId("library-item");
+    expect(visible).toHaveLength(1);
+    expect(visible[0]).toHaveAttribute("data-component-type", "spacer");
   });
 });

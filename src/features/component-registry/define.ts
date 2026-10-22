@@ -1,5 +1,6 @@
 import type { FrameNode, StyleValue } from "@/features/document/model";
 import { createId } from "@/lib/ids";
+import type { InspectorField } from "@/features/component-registry/inspector";
 import type { ComponentDefinition } from "@/features/component-registry/types";
 
 /**
@@ -12,6 +13,8 @@ export interface ComponentSpec {
   label: string;
   category: ComponentDefinition["category"];
   description: string;
+  /** Library icon shown in the Components tab and layer tree (Phase 4). */
+  icon: ComponentDefinition["icon"];
   acceptsChildren: boolean;
   allowedChildTypes?: readonly string[] | null;
   propSchema: ComponentDefinition["propSchema"];
@@ -20,6 +23,8 @@ export interface ComponentSpec {
   /** Defaults for composite presets (Navbar/Hero/Footer). */
   defaultChildren?: () => FrameNode[];
   renderEditor: ComponentDefinition["renderEditor"];
+  /** Inspector field declarations; rendered section-by-section by the inspector. */
+  controls?: readonly InspectorField[];
   canDuplicate?: boolean;
   canDelete?: boolean;
   canLock?: boolean;
@@ -33,6 +38,7 @@ export function defineComponent(spec: ComponentSpec): ComponentDefinition {
     label: spec.label,
     category: spec.category,
     description: spec.description,
+    icon: spec.icon,
     acceptsChildren: spec.acceptsChildren,
     allowedChildTypes,
     propSchema: spec.propSchema,
@@ -44,6 +50,7 @@ export function defineComponent(spec: ComponentSpec): ComponentDefinition {
     // Closure over `definition` is only invoked after initialization.
     createDefaultNode: () => buildNode(definition),
     renderEditor: spec.renderEditor,
+    controls: spec.controls ?? [],
     canDuplicate: spec.canDuplicate ?? true,
     canDelete: spec.canDelete ?? true,
     canLock: spec.canLock ?? true,

@@ -1,5 +1,7 @@
+import { Minus, PanelBottom, PanelsTopLeft, Sparkles } from "lucide-react";
 import type { CSSProperties } from "react";
 import { z } from "zod";
+import { ALIGN_ITEMS_OPTIONS, field } from "@/features/component-registry/inspector";
 import type { FrameNode, StyleValue } from "@/features/document/model";
 import { buildNode, defineComponent } from "@/features/component-registry/define";
 import { stylesToCss } from "@/features/component-registry/styles";
@@ -21,6 +23,7 @@ export const dividerComponent = defineComponent({
   label: "Divider",
   category: "structure",
   description: "Horizontal separator line with configurable thickness and color.",
+  icon: Minus,
   acceptsChildren: false,
   propSchema: z.object({}),
   defaultStyles: () => ({
@@ -29,6 +32,13 @@ export const dividerComponent = defineComponent({
     borderStyle: "solid",
     borderColor: "#d4d4d8",
   }),
+  controls: [
+    field.styleUnit("width", "Width"),
+    field.styleUnit("borderWidth", "Thickness"),
+    field.styleColor("borderColor", "Color"),
+    field.styleUnit("marginTop", "Top margin"),
+    field.styleUnit("marginBottom", "Bottom margin"),
+  ],
   renderEditor: (node) => {
     const css = stylesToCss(node.styles) as Record<string, string | number | undefined>;
     const { borderWidth, borderStyle, borderColor, ...rest } = css;
@@ -93,6 +103,7 @@ export const navbarComponent = defineComponent({
   label: "Navbar",
   category: "structure",
   description: "Top navigation bar composed of an editable heading and links.",
+  icon: PanelsTopLeft,
   acceptsChildren: true,
   propSchema: z.object({}),
   defaultStyles: () => ({
@@ -103,6 +114,12 @@ export const navbarComponent = defineComponent({
     padding: 16,
     backgroundColor: "#ffffff",
   }),
+  controls: [
+    field.styleSelect("alignItems", "Align items", ALIGN_ITEMS_OPTIONS),
+    field.styleUnit("gap", "Gap"),
+    field.styleUnit("padding", "Padding"),
+    field.styleColor("backgroundColor", "Background"),
+  ],
   defaultChildren: () => [
     nodeOf(headingComponent, {
       props: { level: 3, text: "Brand" },
@@ -131,6 +148,7 @@ export const heroComponent = defineComponent({
   label: "Hero",
   category: "structure",
   description: "Introductory hero block composed of editable text and a button.",
+  icon: Sparkles,
   acceptsChildren: true,
   propSchema: z.object({}),
   defaultStyles: () => ({
@@ -142,6 +160,13 @@ export const heroComponent = defineComponent({
     gap: 16,
     backgroundColor: "#ffffff",
   }),
+  controls: [
+    field.styleUnit("padding", "Padding"),
+    field.styleUnit("minHeight", "Min height"),
+    field.styleUnit("gap", "Gap"),
+    field.styleColor("backgroundColor", "Background"),
+    field.styleColor("color", "Text color"),
+  ],
   defaultChildren: () => [
     nodeOf(headingComponent, {
       props: { level: 1, text: "Build something worth showing" },
@@ -167,6 +192,7 @@ export const footerComponent = defineComponent({
   label: "Footer",
   category: "structure",
   description: "Page footer composed of editable text and links.",
+  icon: PanelBottom,
   acceptsChildren: true,
   propSchema: z.object({}),
   defaultStyles: () => ({
@@ -177,6 +203,13 @@ export const footerComponent = defineComponent({
     alignItems: "center",
     backgroundColor: "#fafafa",
   }),
+  controls: [
+    field.styleUnit("padding", "Padding"),
+    field.styleUnit("gap", "Gap"),
+    field.styleSelect("alignItems", "Align items", ALIGN_ITEMS_OPTIONS),
+    field.styleColor("backgroundColor", "Background"),
+    field.styleColor("color", "Text color"),
+  ],
   defaultChildren: () => [
     nodeOf(textComponent, { props: { text: "© 2026 Your name" }, name: "Copyright" }),
     nodeOf(stackComponent, {

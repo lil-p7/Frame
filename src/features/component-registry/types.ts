@@ -1,6 +1,8 @@
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { z } from "zod";
 import type { FrameNode, StyleValue } from "@/features/document/model";
+import type { InspectorField } from "@/features/component-registry/inspector";
 
 /** Library grouping (spec §9B): Layout, Text, Media, Interactive, Structure. */
 export type ComponentCategory = "layout" | "text" | "media" | "interactive" | "structure";
@@ -27,6 +29,8 @@ export interface ComponentDefinition {
   category: ComponentCategory;
   /** Short human description for tooltips in the library. */
   description: string;
+  /** Library icon (spec §9B: every registered component declares an icon). */
+  icon: LucideIcon;
 
   acceptsChildren: boolean;
   /**
@@ -59,4 +63,11 @@ export interface ComponentDefinition {
   canDuplicate: boolean;
   canDelete: boolean;
   canLock: boolean;
+
+  /**
+   * Inspector controls this component exposes (spec §11, §12: the registry
+   * drives inspector configuration). The inspector renders sections only
+   * from these declarations.
+   */
+  controls: readonly InspectorField[];
 }

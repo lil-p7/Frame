@@ -1,7 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  useSensor,
+  useSensors,
+  type DragCancelEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { cn } from "@/lib/cn";
-import type { FrameProject } from "@/features/document/model";
+import type { FramePage, FrameProject } from "@/features/document/model";
+import { getComponent } from "@/features/component-registry/registry";
+import { findNode } from "@/features/document/traversal";
+import {
+  bandFromPointerRatio,
+  effectiveBand,
+  pointerYFrom,
+  resolveDropTarget,
+  type DragPayload,
+  type DropBand,
+} from "@/features/editor/dnd/dropResolution";
 import { CanvasWorkspace } from "@/features/editor/components/CanvasWorkspace";
 import { ComponentSidebar } from "@/features/editor/components/ComponentSidebar";
 import { EditorToolbar } from "@/features/editor/components/EditorToolbar";
@@ -9,10 +31,38 @@ import { PanelResizeHandle } from "@/features/editor/components/PanelResizeHandl
 import { PropertiesInspector } from "@/features/editor/components/PropertiesInspector";
 import { StatusBar } from "@/features/editor/components/StatusBar";
 import { useEditorStore } from "@/features/editor/stores/editorStore";
+import { usePageCommands } from "@/features/editor/usePageCommands";
 import type { ProjectRepository } from "@/features/projects/types";
 
 /** Below this width the sidebars auto-collapse once so the canvas stays usable. */
 const COMPACT_BREAKPOINT = 900;
+
+/**
+ * Nearest canvas node to a client Y coordinate, used when the pointer is in
+ * page-level empty space (gaps, padding) while over the canvas page zone.
+ * Returns null when layout is unavailable (e.g. jsdom without mocks) so
+ * callers keep the safe append-at-root fallback.
+ */
+function nearestCanvasChild(pointerY: number): { nodeId: string; ratio: number } | null {
+  const elements = document.querySelectorAll<HTMLElement>(
+    '[data-testid="canvas-node"][data-node-id]',
+  );
+  let best: { nodeId: string; ratio: number; dist: number } | null = null;
+  for (const element of elements) {
+    const rect = element.getBoundingClientRect();
+    if (rect.height <= 0) return null;
+    const nodeId = element.dataset.nodeId;
+    if (nodeId === undefined) continue;
+    if (pointerY >= rect.top && pointerY <= rect.bottom) {
+      return { nodeId, ratio: (pointerY - rect.top) / rect.height };
+    }
+    const dist = Math.min(Math.abs(pointerY - rect.top), Math.abs(pointerY - rect.bottom));
+    if (best === null || dist < best.dist) {
+      best = { nodeId, ratio: pointerY < rect.top ? 0 : 1, dist };
+    }
+  }
+  return best;
+}
 
 interface EditorShellProps {
   project: FrameProject;
@@ -45,6 +95,156 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const currentPage = project.pages.find((page) => page.id === currentPageId) ?? project.pages[0];
+  // Non-null view of the page for the drag handlers defined below the guard.
+  const activePage = currentPage ?? project.pages[0]!;
+
+  // Phase 4 editing flow: commands mutate the document, persist it, and keep
+  // selection valid (spec §9A, §9C, §13). Stored here so every panel shares it.
+  const pageCommands = usePageCommands({
+    page: currentPage ?? project.pages[0]!,
+    project,
+    repository,
+    onProjectChanged,
+  });
+
+  // Phase 6: one dnd-kit context drives library→canvas, library→layers, and
+  // node moves across both surfaces (spec §15). The document only changes in
+  // `onDragEnd` with a valid resolved target — cancelled and invalid drags
+  // are non-mutating by construction.
+  const drag = useEditorStore((s) => s.drag);
+  const setDragStart = useEditorStore((s) => s.setDragStart);
+  const setDragOver = useEditorStore((s) => s.setDragOver);
+  const setDragEnd = useEditorStore((s) => s.setDragEnd);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+
+  /**
+   * Resolves a drag event into the component the pointer is over plus the
+   * band (before/inside/after) — shared by `onDragOver` (indicators) and
+   * `onDragEnd` (commit) so both always agree.
+   */
+  const resolveOver = useCallback(
+    (
+      event: DragOverEvent | DragEndEvent,
+    ): { overNodeId: string; band: DropBand; ratio: number } | null => {
+      const over = event.over;
+      if (over === null) return null;
+      const data = over.data.current as { zone?: "canvas" | "layer"; nodeId?: string } | null;
+      const zone = data?.zone;
+      let overNodeId = data?.nodeId;
+      if (zone === undefined || overNodeId === undefined) return null;
+
+      const pointerY = pointerYFrom(event.activatorEvent, event.delta.y);
+      const rect = over.rect;
+      let ratio =
+        rect !== null && rect.height > 0 && pointerY !== null
+          ? (pointerY - rect.top) / rect.height
+          : 0.5;
+      let band = bandFromPointerRatio(ratio);
+
+      // Canvas page zone with children: the gaps between children are their
+      // own empty space (spec §15 explicit zones) — resolve the nearest
+      // child so a gap drop becomes a before/after position instead of
+      // silently appending at the end of the page.
+      if (
+        zone === "canvas" &&
+        overNodeId === activePage.root.id &&
+        activePage.root.children.length > 0 &&
+        pointerY !== null
+      ) {
+        const nearest = nearestCanvasChild(pointerY);
+        if (nearest !== null) {
+          overNodeId = nearest.nodeId;
+          ratio = nearest.ratio;
+          band = bandFromPointerRatio(ratio);
+        }
+      }
+
+      return { overNodeId, band, ratio };
+    },
+    [activePage],
+  );
+
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const payload = event.active.data.current as DragPayload | null | undefined;
+      if (payload === undefined || payload === null) return;
+      setDragStart(payload);
+    },
+    [setDragStart],
+  );
+
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const payload = event.active.data.current as DragPayload | null | undefined;
+      const resolved = resolveOver(event);
+      if (payload === undefined || payload === null || resolved === null) {
+        setDragOver(null);
+        return;
+      }
+      const zone = (event.over?.data.current as { zone?: "canvas" | "layer" } | null)?.zone ?? null;
+      const valid =
+        resolveDropTarget(
+          activePage,
+          payload,
+          resolved.overNodeId,
+          resolved.band,
+          resolved.ratio,
+        ) !== null;
+      // Indicators show the band that will actually commit (§15): "inside"
+      // over an incompatible target is already degraded to the nearer edge.
+      const band = effectiveBand(
+        activePage,
+        payload,
+        resolved.overNodeId,
+        resolved.band,
+        resolved.ratio,
+      );
+      setDragOver({
+        zone,
+        overNodeId: resolved.overNodeId,
+        band: band ?? resolved.band,
+        valid,
+      });
+    },
+    [activePage, resolveOver, setDragOver],
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const payload = event.active.data.current as DragPayload | null | undefined;
+      const resolved =
+        payload === undefined || payload === null ? null : resolveOver(event);
+      setDragEnd();
+      if (payload === undefined || payload === null || resolved === null) return;
+      const target = resolveDropTarget(
+        activePage,
+        payload,
+        resolved.overNodeId,
+        resolved.band,
+        resolved.ratio,
+      );
+      // Invalid drop: rejected without touching the document (§15).
+      if (target === null) return;
+      // One completed drag = one command = one persistence write (§14: one
+      // history entry, wired when history lands in Phase 7).
+      if (payload.kind === "library") {
+        pageCommands.insertComponentAt(payload.componentType, target.parentId, target.index);
+      } else {
+        pageCommands.moveLayer(payload.nodeId, target.parentId, target.index);
+      }
+    },
+    [activePage, pageCommands, resolveOver, setDragEnd],
+  );
+
+  const handleDragCancel = useCallback(
+    (_event: DragCancelEvent) => {
+      // Escape or a dropped-outside drag: no mutation ever happened.
+      setDragEnd();
+    },
+    [setDragEnd],
+  );
 
   // Default to the first page whenever the stored selection is missing or stale.
   useEffect(() => {
@@ -100,6 +300,14 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
         onFitToWorkspace={() => fitToWorkspace(canvasRef.current?.clientWidth ?? 0)}
       />
 
+      <DndContext
+        sensors={sensors}
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
       <div className="flex min-h-0 flex-1">
         {leftPanelCollapsed ? (
           <button
@@ -120,7 +328,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
             >
               <div className="flex min-h-0 flex-1">
                 <div className="min-w-0 flex-1">
-                  <ComponentSidebar root={currentPage.root} />
+                  <ComponentSidebar page={currentPage} commands={pageCommands} />
                 </div>
                 <button
                   type="button"
@@ -140,7 +348,11 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
           </>
         )}
 
-        <CanvasWorkspace page={currentPage} scrollerRef={canvasRef} />
+        <CanvasWorkspace
+          page={currentPage}
+          scrollerRef={canvasRef}
+          onInsertFirstSection={() => pageCommands.insertComponent("section")}
+        />
 
         {rightPanelCollapsed ? (
           <button
@@ -174,7 +386,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
                   <span className="sr-only">Collapse inspector</span>
                 </button>
                 <div className="min-w-0 flex-1">
-                  <PropertiesInspector page={currentPage} />
+                  <PropertiesInspector page={currentPage} commands={pageCommands} />
                 </div>
               </div>
             </aside>
@@ -182,7 +394,35 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
         )}
       </div>
 
+      <DragOverlay dropAnimation={null}>
+        {drag.payload === null ? null : (
+          <DragOverlayCard payload={drag.payload} page={currentPage} />
+        )}
+      </DragOverlay>
+      </DndContext>
+
       <StatusBar page={currentPage} />
+    </div>
+  );
+}
+
+/** Temporary drag preview (spec §15): never rendered into the document. */
+function DragOverlayCard({ payload, page }: { payload: DragPayload; page: FramePage }) {
+  const definition =
+    payload.kind === "library" ? getComponent(payload.componentType) : undefined;
+  const nodeName =
+    payload.kind === "node" ? (findNode(page.root, payload.nodeId)?.name ?? null) : null;
+  const Icon = definition?.icon;
+  const label = definition?.label ?? nodeName ?? "";
+  return (
+    <div
+      data-testid="drag-overlay"
+      className="pointer-events-none flex items-center gap-1.5 rounded border border-blue-400 bg-white/95 px-2 py-1 text-xs font-medium text-zinc-800 shadow-lg dark:bg-zinc-900/95 dark:text-zinc-100"
+    >
+      {Icon !== undefined && (
+        <Icon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+      )}
+      {label}
     </div>
   );
 }

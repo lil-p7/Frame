@@ -1,5 +1,14 @@
+import { Heading, Pilcrow, Type } from "lucide-react";
 import { createElement } from "react";
 import { z } from "zod";
+import {
+  FONT_FAMILY_OPTIONS,
+  FONT_WEIGHT_OPTIONS,
+  TEXT_ALIGN_OPTIONS,
+  TEXT_DECORATION_OPTIONS,
+  TEXT_TRANSFORM_OPTIONS,
+  field,
+} from "@/features/component-registry/inspector";
 import { defineComponent } from "@/features/component-registry/define";
 import { stylesToCss } from "@/features/component-registry/styles";
 import { numberProp, stringProp } from "@/features/component-registry/props";
@@ -10,6 +19,7 @@ export const headingComponent = defineComponent({
   label: "Heading",
   category: "text",
   description: "Section heading from H1 to H6 with editable text.",
+  icon: Heading,
   acceptsChildren: false,
   propSchema: z.object({
     level: z.number().int().min(1).max(6),
@@ -17,6 +27,24 @@ export const headingComponent = defineComponent({
   }),
   defaultProps: { level: 2, text: "Heading" },
   defaultStyles: () => ({ margin: 0 }),
+  controls: [
+    field.propNumericSelect(
+      "level",
+      "Level",
+      [1, 2, 3, 4, 5, 6].map((level) => ({
+        value: String(level),
+        label: `H${level}`,
+      })),
+    ),
+    field.propText("text", "Text"),
+    field.styleSelect("fontFamily", "Font family", FONT_FAMILY_OPTIONS),
+    field.styleUnit("fontSize", "Font size"),
+    field.styleNumericSelect("fontWeight", "Weight", FONT_WEIGHT_OPTIONS),
+    field.styleNumber("lineHeight", "Line height"),
+    field.styleNumber("letterSpacing", "Letter spacing"),
+    field.styleSelect("textAlign", "Alignment", TEXT_ALIGN_OPTIONS),
+    field.styleColor("color", "Text color"),
+  ],
   renderEditor: (node) => {
     const level = numberProp(node.props, "level", 2);
     const text = stringProp(node.props, "text", "");
@@ -35,10 +63,21 @@ export const paragraphComponent = defineComponent({
   label: "Paragraph",
   category: "text",
   description: "Editable paragraph of running text.",
+  icon: Pilcrow,
   acceptsChildren: false,
   propSchema: z.object({ text: z.string().max(2000) }),
   defaultProps: { text: "Paragraph text" },
   defaultStyles: () => ({ margin: 0 }),
+  controls: [
+    field.propTextarea("text", "Text"),
+    field.styleSelect("fontFamily", "Font family", FONT_FAMILY_OPTIONS),
+    field.styleUnit("fontSize", "Font size"),
+    field.styleNumericSelect("fontWeight", "Weight", FONT_WEIGHT_OPTIONS),
+    field.styleNumber("lineHeight", "Line height"),
+    field.styleNumber("letterSpacing", "Letter spacing"),
+    field.styleSelect("textAlign", "Alignment", TEXT_ALIGN_OPTIONS),
+    field.styleColor("color", "Text color"),
+  ],
   renderEditor: (node) => (
     <p style={stylesToCss(node.styles)} data-component="paragraph">
       {stringProp(node.props, "text", "")}
@@ -52,10 +91,20 @@ export const textComponent = defineComponent({
   label: "Text",
   category: "text",
   description: "General-purpose inline text element.",
+  icon: Type,
   acceptsChildren: false,
   propSchema: z.object({ text: z.string().max(500) }),
   defaultProps: { text: "Text" },
   defaultStyles: () => ({}),
+  controls: [
+    field.propText("text", "Text"),
+    field.styleUnit("fontSize", "Font size"),
+    field.styleNumericSelect("fontWeight", "Weight", FONT_WEIGHT_OPTIONS),
+    field.styleColor("color", "Text color"),
+    field.styleSelect("textAlign", "Alignment", TEXT_ALIGN_OPTIONS),
+    field.styleSelect("textTransform", "Transform", TEXT_TRANSFORM_OPTIONS),
+    field.styleSelect("textDecoration", "Decoration", TEXT_DECORATION_OPTIONS),
+  ],
   renderEditor: (node) => (
     <span style={stylesToCss(node.styles)} data-component="text">
       {stringProp(node.props, "text", "")}

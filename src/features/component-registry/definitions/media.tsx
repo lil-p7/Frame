@@ -1,4 +1,6 @@
+import { Image } from "lucide-react";
 import { z } from "zod";
+import { field } from "@/features/component-registry/inspector";
 import { defineComponent } from "@/features/component-registry/define";
 import { stylesToCss } from "@/features/component-registry/styles";
 import { stringProp } from "@/features/component-registry/props";
@@ -25,6 +27,7 @@ export const imageComponent = defineComponent({
   label: "Image",
   category: "media",
   description: "Picture with alt text and configurable fit, size, and radius.",
+  icon: Image,
   acceptsChildren: false,
   propSchema: z.object({
     src: z.string().max(2048).refine(isSafeImageSource, "Unsupported image source"),
@@ -32,6 +35,13 @@ export const imageComponent = defineComponent({
   }),
   defaultProps: { src: "", alt: "" },
   defaultStyles: () => ({ width: "100%", height: 240, borderRadius: 8 }),
+  controls: [
+    field.propUrl("src", "Image source"),
+    field.propText("alt", "Alt text"),
+    field.styleUnit("width", "Width"),
+    field.styleUnit("height", "Height"),
+    field.styleUnit("borderRadius", "Corner radius"),
+  ],
   renderEditor: (node) => {
     const src = stringProp(node.props, "src", "");
     const alt = stringProp(node.props, "alt", "");

@@ -1,25 +1,98 @@
 import { useState } from "react";
-import { Component, Layers } from "lucide-react";
+import { Component, GripVertical, Layers, Plus, Search } from "lucide-react";
+import { useDraggable } from "@dnd-kit/core";
 import { cn } from "@/lib/cn";
-import type { FrameNode } from "@/features/document/model";
+import type {
+  ComponentCategory,
+  ComponentDefinition,
+} from "@/features/component-registry/types";
+import { COMPONENT_CATEGORIES } from "@/features/component-registry/types";
+import { listComponents } from "@/features/component-registry/registry";
+import type { FramePage } from "@/features/document/model";
+import { findNode } from "@/features/document/traversal";
+import { resolveInsertionTarget, type PageCommands } from "@/features/editor/usePageCommands";
+import type { DragPayload } from "@/features/editor/dnd/dropResolution";
 import { LayersPanel } from "@/features/editor/components/LayersPanel";
 
 interface ComponentSidebarProps {
-  root: FrameNode;
+  page: FramePage;
+  commands: PageCommands;
 }
+
+const CATEGORY_LABELS: Record<ComponentCategory, string> = {
+  layout: "Layout",
+  text: "Text",
+  media: "Media",
+  interactive: "Interactive",
+  structure: "Structure",
+};
 
 type TabId = "components" | "layers";
 
-/** Groups the component library will list once the registry lands (Phase 4). */
-const UPCOMING_GROUPS = ["Layout", "Text", "Media", "Interactive", "Structure"] as const;
+/**
+ * One library entry: click inserts (Phase 4); dragging carries the component
+ * type onto the canvas or layer tree (Phase 6, spec §9A drag affordance,
+ * §15 component-library drag). Both paths share the same command layer.
+ */
+function LibraryItemButton({
+  definition,
+  insertComponent,
+}: {
+  definition: ComponentDefinition;
+  insertComponent: (type: string) => void;
+}) {
+  const { attributes, listeners, setActivatorNodeRef, isDragging } = useDraggable({
+    id: `library-item:${definition.type}`,
+    data: { kind: "library", componentType: definition.type } satisfies DragPayload,
+  });
+  const Icon = definition.icon;
+  return (
+    <button
+      type="button"
+      ref={setActivatorNodeRef}
+      data-testid="library-item"
+      data-component-type={definition.type}
+      title={definition.description}
+      aria-label={`Insert ${definition.label}`}
+      onClick={() => insertComponent(definition.type)}
+      {...listeners}
+      {...attributes}
+      className={cn(
+        "group flex w-full items-start gap-2 rounded px-2 py-1.5 text-left hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-blue-600 dark:hover:bg-zinc-800/70",
+        isDragging && "opacity-40",
+      )}
+    >
+      <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-100 text-zinc-500 group-hover:bg-white group-hover:text-blue-600 dark:bg-zinc-800 dark:text-zinc-400 dark:group-hover:text-blue-400">
+        <Icon className="h-3 w-3" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">
+          {definition.label}
+          <Plus
+            className="h-2.5 w-2.5 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-500"
+            aria-hidden="true"
+          />
+        </span>
+        <span className="block truncate text-[10px] leading-snug text-zinc-400 dark:text-zinc-500">
+          {definition.description}
+        </span>
+      </span>
+      <GripVertical
+        className="mt-1 h-3 w-3 shrink-0 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-600"
+        aria-hidden="true"
+      />
+    </button>
+  );
+}
 
 /**
  * Left sidebar with the two tabs from spec §9: Components and Layers.
  *
- * The Layers tab is live (document tree + selection sync). The Components tab
- * honestly states what is coming instead of showing fake, non-inserting items.
+ * The Components tab lists the registry (spec §9A) grouped by category with
+ * a search field; clicking an item inserts a default instance at the current
+ * valid location (Phase 4 — drag-and-drop arrives in Phase 6).
  */
-export function ComponentSidebar({ root }: ComponentSidebarProps) {
+export function ComponentSidebar({ page, commands }: ComponentSidebarProps) {
   const [activeTab, setActiveTab] = useState<TabId>("layers");
 
   const tabClass = (active: boolean) =>
@@ -60,30 +133,96 @@ export function ComponentSidebar({ root }: ComponentSidebarProps) {
       </div>
 
       {activeTab === "components" ? (
-        <div className="flex-1 overflow-y-auto p-4" role="tabpanel" aria-label="Components">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Component library
-          </h2>
-          <p className="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Components are defined in the registry (Phase 3) and listed here for insertion (Phase
-            4). Nothing is offered yet because nothing would work yet.
-          </p>
-          <ul className="mt-3 space-y-1.5">
-            {UPCOMING_GROUPS.map((group) => (
-              <li
-                key={group}
-                className="rounded border border-dashed border-zinc-200 px-2 py-1.5 text-xs text-zinc-400 dark:border-zinc-700 dark:text-zinc-500"
-              >
-                {group}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ComponentLibrary page={page} insertComponent={commands.insertComponent} />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col" role="tabpanel" aria-label="Layers">
-          <LayersPanel root={root} />
+          <LayersPanel page={page} commands={commands} />
         </div>
       )}
+    </div>
+  );
+}
+
+interface ComponentLibraryProps {
+  page: FramePage;
+  insertComponent: (type: string) => void;
+}
+
+function ComponentLibrary({ page, insertComponent }: ComponentLibraryProps) {
+  const [query, setQuery] = useState("");
+
+  const needle = query.trim().toLowerCase();
+  const matches = (name: string, type: string, description: string): boolean =>
+    needle.length === 0 ||
+    name.toLowerCase().includes(needle) ||
+    type.toLowerCase().includes(needle) ||
+    description.toLowerCase().includes(needle);
+
+  // Where the next click will land — shown honestly because insertion without
+  // drop indicators should not be a surprise.
+  const target = resolveInsertionTarget(page, null, "section");
+  const targetNode = findNode(page.root, target.parentId);
+  const targetLabel =
+    targetNode === null ? "the page root" : `“${targetNode.name}” (or beside the selection)`;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" role="tabpanel" aria-label="Components">
+      <div className="border-b border-zinc-200 p-2.5 dark:border-zinc-800">
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search components"
+            aria-label="Search components"
+            className="h-7 w-full rounded border border-zinc-200 bg-white pr-2 pl-7 text-xs text-zinc-800 placeholder-zinc-400 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          />
+        </div>
+        <p className="mt-2 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+          Click a component to insert it into {targetLabel}, or drag it onto the canvas or a
+          layer.
+        </p>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-2.5">
+        {COMPONENT_CATEGORIES.map((category) => {
+          const definitions = listComponents(category).filter((definition) =>
+            matches(definition.label, definition.type, definition.description),
+          );
+          if (definitions.length === 0) return null;
+          return (
+            <section key={category} className="mb-3">
+              <h2 className="px-1 pb-1 text-[10px] font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">
+                {CATEGORY_LABELS[category]}
+              </h2>
+              <ul className="space-y-1">
+                {definitions.map((definition) => (
+                  <li key={definition.type}>
+                    <LibraryItemButton
+                      definition={definition}
+                      insertComponent={insertComponent}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+        {COMPONENT_CATEGORIES.every(
+          (category) =>
+            listComponents(category).filter((definition) =>
+              matches(definition.label, definition.type, definition.description),
+            ).length === 0,
+        ) && (
+          <p className="px-1 py-4 text-xs text-zinc-500 dark:text-zinc-400">
+            No components match “{query.trim()}”.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

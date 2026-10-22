@@ -1,4 +1,10 @@
+import { Link, MousePointerClick } from "lucide-react";
 import { z } from "zod";
+import {
+  FONT_WEIGHT_OPTIONS,
+  TEXT_DECORATION_OPTIONS,
+  field,
+} from "@/features/component-registry/inspector";
 import { defineComponent } from "@/features/component-registry/define";
 import { stylesToCss } from "@/features/component-registry/styles";
 import { booleanProp, stringProp } from "@/features/component-registry/props";
@@ -21,9 +27,20 @@ export const buttonComponent = defineComponent({
   label: "Button",
   category: "interactive",
   description: "Call-to-action button with an editable label and destination.",
+  icon: MousePointerClick,
   acceptsChildren: false,
   propSchema: z.object({ label: z.string().max(120), href: hrefSchema }),
   defaultProps: { label: "Button", href: "#" },
+  controls: [
+    field.propText("label", "Label"),
+    field.propUrl("href", "Destination"),
+    field.styleUnit("padding", "Padding", ["px"]),
+    field.styleUnit("borderRadius", "Corner radius"),
+    field.styleColor("backgroundColor", "Background"),
+    field.styleColor("color", "Text color"),
+    field.styleUnit("fontSize", "Font size"),
+    field.styleNumericSelect("fontWeight", "Weight", FONT_WEIGHT_OPTIONS),
+  ],
   defaultStyles: () => ({
     backgroundColor: "#2563eb",
     color: "#ffffff",
@@ -55,6 +72,7 @@ export const linkComponent = defineComponent({
   label: "Link",
   category: "interactive",
   description: "Inline link with an editable label and destination.",
+  icon: Link,
   acceptsChildren: false,
   propSchema: z.object({
     label: z.string().max(120),
@@ -63,6 +81,13 @@ export const linkComponent = defineComponent({
   }),
   defaultProps: { label: "Link", href: "#", newTab: false },
   defaultStyles: () => ({ color: "#2563eb", textDecoration: "underline", fontSize: 14 }),
+  controls: [
+    field.propText("label", "Label"),
+    field.propUrl("href", "Destination"),
+    field.styleColor("color", "Text color"),
+    field.styleSelect("textDecoration", "Decoration", TEXT_DECORATION_OPTIONS),
+    field.styleUnit("fontSize", "Font size"),
+  ],
   renderEditor: (node) => {
     const newTab = booleanProp(node.props, "newTab", false);
     return (

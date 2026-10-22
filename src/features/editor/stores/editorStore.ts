@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { DragPayload, DropBand } from "@/features/editor/dnd/dropResolution";
 
 /**
  * Central editor UI state (spec §7, §10, §34).
@@ -88,7 +89,36 @@ export interface EditorState extends EditorPreferences {
   setCurrentPage: (pageId: string | null) => void;
   selectNode: (nodeId: string | null) => void;
   setHoveredNode: (nodeId: string | null) => void;
+
+  /** Phase 6: ephemeral drag-and-drop state (never persisted, §13 UI state). */
+  drag: DragUiState;
+  setDragStart: (payload: DragPayload) => void;
+  setDragOver: (over: DragOverUiState | null) => void;
+  setDragEnd: () => void;
 }
+
+/** What a drag is carrying (library item or an existing node). */
+export interface DragUiState {
+  payload: DragPayload | null;
+  /** Which surface the pointer is over: canvas or layer tree. */
+  zone: "canvas" | "layer" | null;
+  /** Component the pointer is over (root id for whole-page/empty drops). */
+  overNodeId: string | null;
+  /** Where relative to that component the drop would land. */
+  band: DropBand;
+  /** False: no valid outcome — surfaces render no indicator (§15). */
+  valid: boolean;
+}
+
+export type DragOverUiState = Omit<DragUiState, "payload">;
+
+const NO_DRAG: DragUiState = {
+  payload: null,
+  zone: null,
+  overNodeId: null,
+  band: "inside",
+  valid: false,
+};
 
 const defaultPreferences: EditorPreferences = {
   viewportSelection: "desktop",
@@ -184,6 +214,17 @@ export const useEditorStore = create<EditorState>()(
       selectNode: (nodeId) => set({ selectedNodeId: nodeId, hoveredNodeId: null }),
 
       setHoveredNode: (nodeId) => set({ hoveredNodeId: nodeId }),
+
+      drag: NO_DRAG,
+
+      setDragStart: (payload) => set({ drag: { ...NO_DRAG, payload } }),
+
+      setDragOver: (over) =>
+        set((state) => ({
+          drag: over === null ? { ...state.drag, overNodeId: null, valid: false } : { ...state.drag, ...over },
+        })),
+
+      setDragEnd: () => set({ drag: NO_DRAG }),
     }),
     {
       name: "frame.editor.preferences",
