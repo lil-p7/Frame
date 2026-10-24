@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { FrameNode, FramePage } from "@/features/document/model";
-import { ROOT_NODE_TYPE } from "@/features/document/model";
+import { createRootNode, type FrameNode, type FramePage } from "@/features/document/model";
 import { getComponent } from "@/features/component-registry/registry";
 import {
   bandFromPointerRatio,
@@ -35,7 +34,7 @@ function page(rootChildren: FrameNode[]): FramePage {
     id: "page-1",
     name: "Page",
     slug: "page",
-    root: node("root", ROOT_NODE_TYPE, rootChildren),
+    root: { ...createRootNode("root"), children: rootChildren },
     settings: { title: "Page", backgroundColor: "#ffffff" },
   };
 }
@@ -137,13 +136,7 @@ describe("resolveDropTarget — node moves (§9C, §15)", () => {
     // Sibling positions around it remain usable: the middle band over the
     // locked container degrades to the nearer edge (bottom half → after).
     expect(
-      resolveDropTarget(
-        locked,
-        { kind: "library", componentType: "heading" },
-        "s1",
-        "inside",
-        0.5,
-      ),
+      resolveDropTarget(locked, { kind: "library", componentType: "heading" }, "s1", "inside", 0.5),
     ).toEqual({ parentId: "root", index: 1 });
   });
 

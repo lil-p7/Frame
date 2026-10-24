@@ -42,8 +42,7 @@ export function CanvasWorkspace({ page, scrollerRef, onInsertFirstSection }: Can
     id: "canvas-page",
     data: { zone: "canvas", nodeId: page.root.id },
   });
-  const pageZoneActive =
-    drag.zone === "canvas" && drag.overNodeId === page.root.id && drag.valid;
+  const pageZoneActive = drag.zone === "canvas" && drag.overNodeId === page.root.id && drag.valid;
 
   return (
     <div

@@ -20,5 +20,9 @@ export default defineConfig({
     setupFiles: ["src/test/setup.ts"],
     css: false,
     include: ["src/**/*.test.{ts,tsx}"],
+    // Integration tests render dnd-kit + the full shell in jsdom; the default
+    // 5s per-test budget flaky-fails under full-suite parallel load on passing
+    // assertions, so the budget is widened (assertions themselves unchanged).
+    testTimeout: 15_000,
   },
 });

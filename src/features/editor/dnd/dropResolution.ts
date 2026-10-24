@@ -18,8 +18,7 @@ export type DropBand = "before" | "inside" | "after";
 
 /** What the current drag is carrying. */
 export type DragPayload =
-  | { kind: "library"; componentType: string }
-  | { kind: "node"; nodeId: string };
+  { kind: "library"; componentType: string } | { kind: "node"; nodeId: string };
 
 /** Resolved drop outcome; `index` is a slot in the *current* children array. */
 export interface DropTarget {
@@ -80,9 +79,7 @@ export function canDropInside(
 /** The child type a drag payload would place, or null when unresolvable. */
 function childTypeOf(page: FramePage, payload: DragPayload): string | null {
   const type =
-    payload.kind === "library"
-      ? payload.componentType
-      : findNode(page.root, payload.nodeId)?.type;
+    payload.kind === "library" ? payload.componentType : findNode(page.root, payload.nodeId)?.type;
   return type !== undefined && getComponent(type) !== undefined ? type : null;
 }
 

@@ -2,10 +2,7 @@ import { useState } from "react";
 import { Component, GripVertical, Layers, Plus, Search } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { cn } from "@/lib/cn";
-import type {
-  ComponentCategory,
-  ComponentDefinition,
-} from "@/features/component-registry/types";
+import type { ComponentCategory, ComponentDefinition } from "@/features/component-registry/types";
 import { COMPONENT_CATEGORIES } from "@/features/component-registry/types";
 import { listComponents } from "@/features/component-registry/registry";
 import type { FramePage } from "@/features/document/model";
@@ -183,8 +180,7 @@ function ComponentLibrary({ page, insertComponent }: ComponentLibraryProps) {
           />
         </div>
         <p className="mt-2 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
-          Click a component to insert it into {targetLabel}, or drag it onto the canvas or a
-          layer.
+          Click a component to insert it into {targetLabel}, or drag it onto the canvas or a layer.
         </p>
       </div>
 
@@ -202,10 +198,7 @@ function ComponentLibrary({ page, insertComponent }: ComponentLibraryProps) {
               <ul className="space-y-1">
                 {definitions.map((definition) => (
                   <li key={definition.type}>
-                    <LibraryItemButton
-                      definition={definition}
-                      insertComponent={insertComponent}
-                    />
+                    <LibraryItemButton definition={definition} insertComponent={insertComponent} />
                   </li>
                 ))}
               </ul>

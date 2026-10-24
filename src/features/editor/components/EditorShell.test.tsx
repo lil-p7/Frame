@@ -148,14 +148,25 @@ describe("EditorShell layout", () => {
     renderEditor(dbName, project.id);
 
     await screen.findByRole("button", { name: "Resize Demo" });
-    const handle = screen.getByTestId("resize-left");
-    fireEvent.keyDown(handle, { key: "ArrowRight" });
-    const aside = screen.getByRole("complementary", { name: "Components and layers" });
-    expect(aside).toHaveStyle({ width: `${DEFAULT_LEFT_PANEL_WIDTH + 8}px` });
+    const pressArrowRight = () =>
+      fireEvent.keyDown(screen.getByTestId("resize-left"), { key: "ArrowRight" });
+
+    pressArrowRight();
+    // React commits the external-store re-render off the event's synchronous
+    // path, so a plain assert after the keypress races the commit.
+    await waitFor(() => {
+      expect(screen.getByRole("complementary", { name: "Components and layers" })).toHaveStyle({
+        width: `${DEFAULT_LEFT_PANEL_WIDTH + 8}px`,
+      });
+    });
 
     // Clamp: hammering further never exceeds the maximum.
-    for (let i = 0; i < 60; i += 1) fireEvent.keyDown(handle, { key: "ArrowRight" });
-    expect(aside).toHaveStyle({ width: "420px" });
+    for (let i = 0; i < 60; i += 1) pressArrowRight();
+    await waitFor(() => {
+      expect(screen.getByRole("complementary", { name: "Components and layers" })).toHaveStyle({
+        width: "420px",
+      });
+    });
   });
 });
 

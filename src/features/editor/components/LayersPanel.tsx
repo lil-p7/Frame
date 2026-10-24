@@ -15,10 +15,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/cn";
 import type { FrameNode, FramePage } from "@/features/document/model";
 import { getComponent } from "@/features/component-registry/registry";
-import {
-  resolveSiblingShift,
-  type DragPayload,
-} from "@/features/editor/dnd/dropResolution";
+import { resolveSiblingShift, type DragPayload } from "@/features/editor/dnd/dropResolution";
 import type { PageCommands } from "@/features/editor/usePageCommands";
 import { useEditorStore } from "@/features/editor/stores/editorStore";
 
@@ -88,12 +85,7 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
     id: `layer-drop:${node.id}`,
     data: { zone: "layer", nodeId: node.id },
   });
-  const {
-    attributes,
-    listeners,
-    setActivatorNodeRef,
-    isDragging,
-  } = useDraggable({
+  const { attributes, listeners, setActivatorNodeRef, isDragging } = useDraggable({
     id: `layer-row:${node.id}`,
     data: { kind: "node", nodeId: node.id } satisfies DragPayload,
     disabled: isRoot || locked,
@@ -172,11 +164,7 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
           if (!event.altKey || isRoot) return;
           if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
           event.preventDefault();
-          const shift = resolveSiblingShift(
-            page,
-            node.id,
-            event.key === "ArrowUp" ? "up" : "down",
-          );
+          const shift = resolveSiblingShift(page, node.id, event.key === "ArrowUp" ? "up" : "down");
           if (shift === null) return;
           commands.moveLayer(node.id, shift.parentId, shift.index);
         }}

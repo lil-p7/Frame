@@ -7,7 +7,6 @@ import {
   pointerWithin,
   useSensor,
   useSensors,
-  type DragCancelEvent,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -115,9 +114,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
   const setDragStart = useEditorStore((s) => s.setDragStart);
   const setDragOver = useEditorStore((s) => s.setDragOver);
   const setDragEnd = useEditorStore((s) => s.setDragEnd);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   /**
    * Resolves a drag event into the component the pointer is over plus the
@@ -214,8 +211,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const payload = event.active.data.current as DragPayload | null | undefined;
-      const resolved =
-        payload === undefined || payload === null ? null : resolveOver(event);
+      const resolved = payload === undefined || payload === null ? null : resolveOver(event);
       setDragEnd();
       if (payload === undefined || payload === null || resolved === null) return;
       const target = resolveDropTarget(
@@ -238,13 +234,10 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
     [activePage, pageCommands, resolveOver, setDragEnd],
   );
 
-  const handleDragCancel = useCallback(
-    (_event: DragCancelEvent) => {
-      // Escape or a dropped-outside drag: no mutation ever happened.
-      setDragEnd();
-    },
-    [setDragEnd],
-  );
+  const handleDragCancel = useCallback(() => {
+    // Escape or a dropped-outside drag: no mutation ever happened.
+    setDragEnd();
+  }, [setDragEnd]);
 
   // Default to the first page whenever the stored selection is missing or stale.
   useEffect(() => {
@@ -308,97 +301,97 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-      <div className="flex min-h-0 flex-1">
-        {leftPanelCollapsed ? (
-          <button
-            type="button"
-            onClick={toggleLeftPanel}
-            title="Show components and layers"
-            className={cn(railButton, "border-r")}
-          >
-            <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            <span className="sr-only">Show components and layers</span>
-          </button>
-        ) : (
-          <>
-            <aside
-              style={{ width: `${leftPanelWidth}px` }}
-              className="flex min-h-0 shrink-0 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-              aria-label="Components and layers"
+        <div className="flex min-h-0 flex-1">
+          {leftPanelCollapsed ? (
+            <button
+              type="button"
+              onClick={toggleLeftPanel}
+              title="Show components and layers"
+              className={cn(railButton, "border-r")}
             >
-              <div className="flex min-h-0 flex-1">
-                <div className="min-w-0 flex-1">
-                  <ComponentSidebar page={currentPage} commands={pageCommands} />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Show components and layers</span>
+            </button>
+          ) : (
+            <>
+              <aside
+                style={{ width: `${leftPanelWidth}px` }}
+                className="flex min-h-0 shrink-0 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                aria-label="Components and layers"
+              >
+                <div className="flex min-h-0 flex-1">
+                  <div className="min-w-0 flex-1">
+                    <ComponentSidebar page={currentPage} commands={pageCommands} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleLeftPanel}
+                    title="Collapse sidebar"
+                    className="flex w-6 shrink-0 items-center justify-center border-l border-zinc-200 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                  >
+                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Collapse components and layers</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={toggleLeftPanel}
-                  title="Collapse sidebar"
-                  className="flex w-6 shrink-0 items-center justify-center border-l border-zinc-200 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                >
-                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Collapse components and layers</span>
-                </button>
-              </div>
-            </aside>
-            <PanelResizeHandle
-              side="left"
-              onResizeDelta={(d) => setLeftPanelWidth(leftPanelWidth + d)}
-            />
-          </>
-        )}
+              </aside>
+              <PanelResizeHandle
+                side="left"
+                onResizeDelta={(d) => setLeftPanelWidth(leftPanelWidth + d)}
+              />
+            </>
+          )}
 
-        <CanvasWorkspace
-          page={currentPage}
-          scrollerRef={canvasRef}
-          onInsertFirstSection={() => pageCommands.insertComponent("section")}
-        />
+          <CanvasWorkspace
+            page={currentPage}
+            scrollerRef={canvasRef}
+            onInsertFirstSection={() => pageCommands.insertComponent("section")}
+          />
 
-        {rightPanelCollapsed ? (
-          <button
-            type="button"
-            onClick={toggleRightPanel}
-            title="Show inspector"
-            className={cn(railButton, "border-l")}
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-            <span className="sr-only">Show inspector</span>
-          </button>
-        ) : (
-          <>
-            <PanelResizeHandle
-              side="right"
-              onResizeDelta={(d) => setRightPanelWidth(rightPanelWidth + d)}
-            />
-            <aside
-              style={{ width: `${rightPanelWidth}px` }}
-              className="flex min-h-0 shrink-0 flex-col border-l border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-              aria-label="Properties inspector"
+          {rightPanelCollapsed ? (
+            <button
+              type="button"
+              onClick={toggleRightPanel}
+              title="Show inspector"
+              className={cn(railButton, "border-l")}
             >
-              <div className="flex min-h-0 flex-1">
-                <button
-                  type="button"
-                  onClick={toggleRightPanel}
-                  title="Collapse inspector"
-                  className="flex w-6 shrink-0 items-center justify-center border-r border-zinc-200 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-                >
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Collapse inspector</span>
-                </button>
-                <div className="min-w-0 flex-1">
-                  <PropertiesInspector page={currentPage} commands={pageCommands} />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Show inspector</span>
+            </button>
+          ) : (
+            <>
+              <PanelResizeHandle
+                side="right"
+                onResizeDelta={(d) => setRightPanelWidth(rightPanelWidth + d)}
+              />
+              <aside
+                style={{ width: `${rightPanelWidth}px` }}
+                className="flex min-h-0 shrink-0 flex-col border-l border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                aria-label="Properties inspector"
+              >
+                <div className="flex min-h-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={toggleRightPanel}
+                    title="Collapse inspector"
+                    className="flex w-6 shrink-0 items-center justify-center border-r border-zinc-200 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                  >
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Collapse inspector</span>
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <PropertiesInspector page={currentPage} commands={pageCommands} />
+                  </div>
                 </div>
-              </div>
-            </aside>
-          </>
-        )}
-      </div>
+              </aside>
+            </>
+          )}
+        </div>
 
-      <DragOverlay dropAnimation={null}>
-        {drag.payload === null ? null : (
-          <DragOverlayCard payload={drag.payload} page={currentPage} />
-        )}
-      </DragOverlay>
+        <DragOverlay dropAnimation={null}>
+          {drag.payload === null ? null : (
+            <DragOverlayCard payload={drag.payload} page={currentPage} />
+          )}
+        </DragOverlay>
       </DndContext>
 
       <StatusBar page={currentPage} />
@@ -408,8 +401,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
 
 /** Temporary drag preview (spec §15): never rendered into the document. */
 function DragOverlayCard({ payload, page }: { payload: DragPayload; page: FramePage }) {
-  const definition =
-    payload.kind === "library" ? getComponent(payload.componentType) : undefined;
+  const definition = payload.kind === "library" ? getComponent(payload.componentType) : undefined;
   const nodeName =
     payload.kind === "node" ? (findNode(page.root, payload.nodeId)?.name ?? null) : null;
   const Icon = definition?.icon;

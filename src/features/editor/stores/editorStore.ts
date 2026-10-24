@@ -221,7 +221,10 @@ export const useEditorStore = create<EditorState>()(
 
       setDragOver: (over) =>
         set((state) => ({
-          drag: over === null ? { ...state.drag, overNodeId: null, valid: false } : { ...state.drag, ...over },
+          drag:
+            over === null
+              ? { ...state.drag, overNodeId: null, valid: false }
+              : { ...state.drag, ...over },
         })),
 
       setDragEnd: () => set({ drag: NO_DRAG }),

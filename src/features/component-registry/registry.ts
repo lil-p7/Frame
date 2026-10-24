@@ -90,7 +90,5 @@ export function parentAllowsChild(parentType: string, childType: string): boolea
   if (parentType === ROOT_NODE_TYPE) return true;
   const definition = getComponent(parentType);
   if (definition === undefined || !definition.acceptsChildren) return false;
-  return (
-    definition.allowedChildTypes === null || definition.allowedChildTypes.includes(childType)
-  );
+  return definition.allowedChildTypes === null || definition.allowedChildTypes.includes(childType);
 }
