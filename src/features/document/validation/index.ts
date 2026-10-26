@@ -1,4 +1,5 @@
 import {
+  RESPONSIVE_BREAKPOINTS,
   ROOT_NODE_TYPE,
   type FrameNode,
   type FramePage,
@@ -79,6 +80,22 @@ export function validatePage(page: FramePage): ValidationIssue[] {
         path: nodePath,
         message: "Styles contain an unsupported property or an unsafe value",
       });
+    }
+
+    // Breakpoint overrides obey the same structured style model (§16/§17).
+    if (node.responsive !== undefined) {
+      for (const [breakpoint, overrides] of Object.entries(node.responsive)) {
+        if (!(RESPONSIVE_BREAKPOINTS as readonly string[]).includes(breakpoint)) {
+          issues.push({ path: nodePath, message: `Unknown breakpoint "${breakpoint}"` });
+          continue;
+        }
+        if (overrides !== undefined && !isValidStyleRecord(overrides)) {
+          issues.push({
+            path: nodePath,
+            message: `Breakpoint "${breakpoint}" has an unsupported property or an unsafe value`,
+          });
+        }
+      }
     }
 
     if (isRoot) {

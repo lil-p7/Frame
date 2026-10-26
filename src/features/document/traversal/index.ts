@@ -71,6 +71,8 @@ export function cloneSubtreeWithFreshIds(node: FrameNode, makeId: () => string):
     id: makeId(),
     props: structuredClone(node.props),
     styles: structuredClone(node.styles),
+    // Responsive overrides belong to the copy, never to the source.
+    ...(node.responsive === undefined ? {} : { responsive: structuredClone(node.responsive) }),
     children: node.children.map((child) => cloneSubtreeWithFreshIds(child, makeId)),
     editor: { ...node.editor },
   };

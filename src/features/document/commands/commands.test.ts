@@ -313,6 +313,56 @@ describe("renameNode and property/style commands", () => {
       /page root cannot be modified/,
     );
   });
+
+  it("writes breakpoint overrides independently and removes them on null", () => {
+    const page = freshPage();
+    const section = nodeOfType("section");
+    const inserted = insertNode(page, { parentId: "root", node: section });
+    const basePadding = section.styles.padding;
+
+    const withMobile = updateNodeStyles(inserted, section.id, { padding: 8 }, "mobile");
+    const withTablet = updateNodeStyles(withMobile, section.id, { padding: 16 }, "tablet");
+    const node = findNode(withTablet.root, section.id)!;
+
+    // Base (desktop) styles are untouched by breakpoint edits, and the
+    // breakpoints stay independent of each other (spec §16).
+    expect(node.styles.padding).toBe(basePadding);
+    expect(node.responsive).toEqual({ mobile: { padding: 8 }, tablet: { padding: 16 } });
+    expect(validatePage(withTablet)).toEqual([]);
+
+    // Removing the last override drops the breakpoint record entirely.
+    const clearedMobile = updateNodeStyles(withTablet, section.id, { padding: null }, "mobile");
+    expect(findNode(clearedMobile.root, section.id)!.responsive).toEqual({
+      tablet: { padding: 16 },
+    });
+    const clearedTablet = updateNodeStyles(clearedMobile, section.id, { padding: null }, "tablet");
+    expect(findNode(clearedTablet.root, section.id)!.responsive).toEqual({});
+
+    // Overrides use the same validated style model (spec §17).
+    expect(() => updateNodeStyles(inserted, section.id, { zIndex: 2 }, "mobile")).toThrow(
+      /not supported/,
+    );
+    expect(() => updateNodeStyles(inserted, section.id, { opacity: 5 }, "tablet")).toThrow(
+      /between 0 and 1/,
+    );
+  });
+
+  it("duplicates breakpoint overrides with the subtree", () => {
+    const page = freshPage();
+    const grid = nodeOfType("grid");
+    const inserted = insertNode(page, { parentId: "root", node: grid });
+
+    // The grid definition ships a mobile one-column default (spec §16).
+    expect(findNode(inserted.root, grid.id)!.responsive).toEqual({
+      mobile: { gridTemplateColumns: "repeat(1, minmax(0, 1fr))" },
+    });
+
+    const duplicated = duplicateNode(inserted, grid.id);
+    const copy = duplicated.root.children[1]!;
+    expect(copy.id).not.toBe(grid.id);
+    expect(copy.responsive).toEqual(findNode(inserted.root, grid.id)!.responsive);
+    expect(copy.responsive).not.toBe(findNode(inserted.root, grid.id)!.responsive);
+  });
 });
 
 describe("visibility, locking, and page settings", () => {
@@ -343,6 +393,20 @@ describe("visibility, locking, and page settings", () => {
       /hex color/,
     );
   });
+
+  it("configures the page name and slug with validation (spec §20)", () => {
+    const page = freshPage();
+    const updated = updatePageSettings(page, { name: "  About us  ", slug: "About Us!" });
+    expect(updated.name).toBe("About us");
+    expect(updated.slug).toBe("about-us"); // normalized to a URL-safe slug
+    expect(page.name).toBe("Home"); // input untouched
+
+    expect(() => updatePageSettings(page, { name: "   " })).toThrow(/Page name is required/);
+    expect(() => updatePageSettings(page, { slug: "   " })).toThrow(/Page slug is required/);
+    expect(() => updatePageSettings(page, { name: "x".repeat(200) })).toThrow(
+      /under 120 characters/,
+    );
+  });
 });
 
 describe("saving and loading preserves the tree (Phase 3 acceptance)", () => {
@@ -355,7 +419,9 @@ describe("saving and loading preserves the tree (Phase 3 acceptance)", () => {
     const hero = nodeOfType("hero");
     const withHero = insertNode(page, { parentId: page.root.id, node: hero });
     const renamed = renameNode(withHero, hero.id, "Landing hero");
-    const styled = updateNodeStyles(renamed, hero.id, { padding: 72 });
+    const styledBase = updateNodeStyles(renamed, hero.id, { padding: 72 });
+    // Breakpoint overrides persist with the document too (spec §16).
+    const styled = updateNodeStyles(styledBase, hero.id, { padding: 32 }, "mobile");
 
     const modified = { ...project, pages: [styled] };
     await repository.saveProject(modified);
@@ -368,6 +434,7 @@ describe("saving and loading preserves the tree (Phase 3 acceptance)", () => {
     const reloadedHero = reloadedPage.root.children[0]!;
     expect(reloadedHero.name).toBe("Landing hero");
     expect(reloadedHero.styles.padding).toBe(72);
+    expect(reloadedHero.responsive).toEqual({ mobile: { padding: 32 } });
     expect(reloadedHero.id).toBe(hero.id); // stable ID across persistence
     expect(getPath(reloadedPage.root, hero.id)?.length).toBe(2);
     // Composite preset children survived too.

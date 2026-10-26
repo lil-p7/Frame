@@ -16,6 +16,8 @@ import {
   resetEditorPreferences,
   useEditorStore,
 } from "@/features/editor/stores/editorStore";
+import { resetHistory } from "@/features/editor/stores/historyStore";
+import { resetClipboard } from "@/features/editor/stores/clipboardStore";
 
 function makeNode(id: string, name: string, children: FrameNode[] = []): FrameNode {
   return makeTypedNode(id, name, "section", children);
@@ -70,6 +72,8 @@ function renderEditor(dbName: string, projectId: string) {
 beforeEach(() => {
   localStorage.clear();
   resetEditorPreferences();
+  resetHistory();
+  resetClipboard();
   useEditorStore.setState({ currentPageId: null, selectedNodeId: null, hoveredNodeId: null });
 });
 
@@ -566,5 +570,163 @@ describe("component library and layer tree (Phase 4)", () => {
     const visible = screen.getAllByTestId("library-item");
     expect(visible).toHaveLength(1);
     expect(visible[0]).toHaveAttribute("data-component-type", "spacer");
+  });
+});
+
+describe("history and keyboard shortcuts (Phase 7)", () => {
+  function rowByNodeId(nodeId: string): HTMLElement {
+    const row = screen
+      .getAllByTestId("layer-row")
+      .find((candidate) => candidate.getAttribute("data-node-id") === nodeId);
+    if (row === undefined) throw new Error(`layer row not found: ${nodeId}`);
+    return row;
+  }
+
+  function canvasNodeByType(type: string): HTMLElement | null {
+    return document.querySelector(`[data-testid="canvas-node"][data-node-type="${type}"]`);
+  }
+
+  async function openComponentsTab(): Promise<void> {
+    const user = userEvent.setup();
+    const sidebar = screen.getByRole("complementary", { name: "Components and layers" });
+    await user.click(within(sidebar).getByRole("tab", { name: /components/i }));
+  }
+
+  it("undoes and redoes an insertion from the toolbar, restoring the same node ID", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-history-insert";
+    const project = await seedProject(dbName, "History Insert", []);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "History Insert" });
+
+    const undo = screen.getByTestId("undo");
+    const redo = screen.getByTestId("redo");
+    expect(undo).toBeDisabled();
+    expect(redo).toBeDisabled();
+
+    await openComponentsTab();
+    await user.click(screen.getByRole("button", { name: "Insert Section" }));
+    const insertedId = await waitFor(() => {
+      const node = canvasNodeByType("section");
+      expect(node).not.toBeNull();
+      return node!.getAttribute("data-node-id");
+    });
+    await waitFor(() => expect(undo).toBeEnabled());
+    expect(redo).toBeDisabled();
+
+    await user.click(undo);
+    await waitFor(() => expect(canvasNodeByType("section")).toBeNull());
+    await waitFor(() => expect(redo).toBeEnabled());
+    expect(undo).toBeDisabled();
+    // Selection parked on the removed component is released safely.
+    await waitFor(() => expect(screen.getByTestId("inspector-empty")).toBeInTheDocument());
+
+    await user.click(redo);
+    await waitFor(() => expect(canvasNodeByType("section")).not.toBeNull());
+    // Redo restores the same logical component with the same ID (spec §14).
+    expect(canvasNodeByType("section")).toHaveAttribute("data-node-id", insertedId);
+  });
+
+  it("deletes with the Delete key and restores the subtree with undo", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-history-delete";
+    const project = await seedProject(dbName, "History Delete", [
+      makeNode("node-hero", "Hero", [makeNode("node-child", "Child")]),
+    ]);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "History Delete" });
+
+    await user.click(rowByNodeId("node-hero"));
+    await user.keyboard("{Delete}");
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-testid="canvas-node"][data-node-id="node-hero"]'),
+      ).toBeNull();
+    });
+
+    // Undo restores the whole deleted subtree, not just the parent.
+    await user.keyboard("{Control>}z{/Control}");
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-testid="canvas-node"][data-node-id="node-hero"]'),
+      ).not.toBeNull();
+    });
+    expect(
+      document.querySelector('[data-testid="canvas-node"][data-node-id="node-child"]'),
+    ).not.toBeNull();
+  });
+
+  it("duplicates and copy-pastes selections from the keyboard with fresh IDs", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-history-copy";
+    const project = await seedProject(dbName, "History Copy", [
+      makeNode("node-hero", "Hero", [makeTypedNode("node-heading", "Heading", "heading")]),
+    ]);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "History Copy" });
+
+    const levelThree = (): HTMLElement[] =>
+      screen.getAllByTestId("layer-row").filter((row) => row.getAttribute("aria-level") === "3");
+
+    await user.click(rowByNodeId("node-heading"));
+    await user.keyboard("{Control>}d{/Control}");
+    await waitFor(() => expect(levelThree()).toHaveLength(2));
+    const afterDuplicate = levelThree().map((row) => row.getAttribute("data-node-id"));
+    expect(new Set(afterDuplicate).size).toBe(2);
+
+    // Copy the selected duplicate and paste it beside itself.
+    await user.keyboard("{Control>}c{/Control}");
+    await user.keyboard("{Control>}v{/Control}");
+    await waitFor(() => expect(levelThree()).toHaveLength(3));
+    expect(new Set(levelThree().map((row) => row.getAttribute("data-node-id"))).size).toBe(3);
+  });
+
+  it("ignores editing shortcuts while focus is inside a text field", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-history-typing";
+    const project = await seedProject(dbName, "History Typing", []);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "History Typing" });
+
+    await openComponentsTab();
+    await user.click(screen.getByRole("button", { name: "Insert Section" }));
+    await waitFor(() => expect(canvasNodeByType("section")).not.toBeNull());
+
+    const search = screen.getByRole("searchbox", { name: "Search components" });
+    await user.click(search);
+    await user.type(search, "sec");
+    await user.keyboard("{Control>}z{/Control}");
+    await user.keyboard("{Backspace}");
+
+    // The document was not touched: only the search field changed.
+    expect(search).toHaveValue("se");
+    expect(canvasNodeByType("section")).not.toBeNull();
+    expect(screen.getByTestId("undo")).toBeEnabled();
+  });
+
+  it("treats a burst of typing as one undo step", async () => {
+    const user = userEvent.setup();
+    const dbName = "shell-history-coalesce";
+    const project = await seedProject(dbName, "History Coalesce", [
+      makeTypedNode("node-heading", "Heading", "heading"),
+    ]);
+    renderEditor(dbName, project.id);
+    await screen.findByRole("button", { name: "History Coalesce" });
+
+    await user.click(rowByNodeId("node-heading"));
+    const input = screen.getByTestId("node-heading-prop-text-input");
+    // Each keystroke pauses long enough to commit individually…
+    const slowUser = userEvent.setup({ delay: 450 });
+    await slowUser.type(input, "New");
+    await waitFor(() =>
+      expect(document.querySelector('[data-component="heading"]')?.textContent).toBe("HeadingNew"),
+    );
+
+    // …but the burst is still one history step, so one undo restores it all.
+    fireEvent.blur(input);
+    fireEvent.keyDown(document.body, { key: "z", ctrlKey: true });
+    await waitFor(() =>
+      expect(document.querySelector('[data-component="heading"]')?.textContent).toBe("Heading"),
+    );
   });
 });

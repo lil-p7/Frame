@@ -1,7 +1,11 @@
 import {
+  RESPONSIVE_BREAKPOINTS,
   ROOT_NODE_TYPE,
+  slugify,
   type FrameNode,
   type FramePage,
+  type ResponsiveStyles,
+  type StyleBreakpoint,
   type StyleValue,
 } from "@/features/document/model";
 import { getComponent } from "@/features/component-registry/registry";
@@ -319,18 +323,10 @@ export function updateNodeProps(
   return finish({ ...page, root: nextRoot });
 }
 
-/**
- * Merges validated style updates. Only properties in the supported style
- * model are accepted (spec §17); `null` removes the override entirely.
- */
-export function updateNodeStyles(
-  page: FramePage,
-  nodeId: string,
-  updates: Record<string, StyleValue>,
-): FramePage {
-  rejectRootOperation(page, nodeId, "modified");
-  const node = requireTarget(page, nodeId);
+const STYLE_BREAKPOINTS: ReadonlySet<string> = new Set(["base", ...RESPONSIVE_BREAKPOINTS]);
 
+/** Shared validation for base and breakpoint style updates (spec §17). */
+function assertValidStyleUpdates(updates: Record<string, StyleValue>): void {
   for (const [key, value] of Object.entries(updates)) {
     if (!isSupportedStyleKey(key)) {
       throw new DocumentCommandError(
@@ -347,17 +343,57 @@ export function updateNodeStyles(
       throw new DocumentCommandError("Opacity must be between 0 and 1");
     }
   }
+}
 
-  const nextStyles: Record<string, StyleValue> = { ...node.styles };
-  for (const [key, value] of Object.entries(updates)) {
-    if (value === null)
-      delete nextStyles[key]; // null clears the override
-    else nextStyles[key] = value;
+/**
+ * Merges validated style updates into the base styles or one breakpoint's
+ * overrides (spec §16, §17). Only properties in the supported style model are
+ * accepted; `null` removes the declaration, and removing the last override of
+ * a breakpoint drops the breakpoint record entirely (restores inheritance).
+ */
+export function updateNodeStyles(
+  page: FramePage,
+  nodeId: string,
+  updates: Record<string, StyleValue>,
+  breakpoint: StyleBreakpoint = "base",
+): FramePage {
+  rejectRootOperation(page, nodeId, "modified");
+  const node = requireTarget(page, nodeId);
+  if (!STYLE_BREAKPOINTS.has(breakpoint)) {
+    throw new DocumentCommandError(`Unknown breakpoint "${String(breakpoint)}"`);
   }
+  assertValidStyleUpdates(updates);
+
+  if (breakpoint === "base") {
+    const nextStyles: Record<string, StyleValue> = { ...node.styles };
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null)
+        delete nextStyles[key]; // null clears the override
+      else nextStyles[key] = value;
+    }
+
+    const nextRoot = updateInTree(page.root, nodeId, (current) => ({
+      ...current,
+      styles: nextStyles,
+    }));
+    return finish({ ...page, root: nextRoot });
+  }
+
+  // Narrower breakpoints keep independent override records (§16).
+  const responsive: ResponsiveStyles = { ...(node.responsive ?? {}) };
+  const overrides: Record<string, StyleValue> = { ...(responsive[breakpoint] ?? {}) };
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === null) delete overrides[key];
+    else overrides[key] = value;
+  }
+
+  const nextResponsive: ResponsiveStyles = { ...responsive };
+  if (Object.keys(overrides).length === 0) delete nextResponsive[breakpoint];
+  else nextResponsive[breakpoint] = overrides;
 
   const nextRoot = updateInTree(page.root, nodeId, (current) => ({
     ...current,
-    styles: nextStyles,
+    responsive: nextResponsive,
   }));
   return finish({ ...page, root: nextRoot });
 }
@@ -385,15 +421,40 @@ export function setNodeLocked(page: FramePage, nodeId: string, locked: boolean):
 }
 
 export interface PageSettingsUpdates {
+  /** Display name of the page (§20 page management). */
+  name?: string;
   title?: string;
+  /** URL slug; normalized with `slugify` before storing. */
+  slug?: string;
   backgroundColor?: string;
 }
 
 const HEX_COLOR = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
-/** Updates page settings with validation (title + background color). */
+/**
+ * Updates page settings with validation (name, slug, title, background).
+ * Slug uniqueness is enforced by the caller, which has the project context.
+ */
 export function updatePageSettings(page: FramePage, updates: PageSettingsUpdates): FramePage {
   const settings = { ...page.settings };
+  let name = page.name;
+  let slug = page.slug;
+
+  if (updates.name !== undefined) {
+    const trimmed = updates.name.trim();
+    if (trimmed.length === 0) throw new DocumentCommandError("Page name is required");
+    if (trimmed.length > 120) {
+      throw new DocumentCommandError("Page name must be under 120 characters");
+    }
+    name = trimmed;
+  }
+
+  if (updates.slug !== undefined) {
+    if (updates.slug.trim().length === 0) {
+      throw new DocumentCommandError("Page slug is required");
+    }
+    slug = slugify(updates.slug);
+  }
 
   if (updates.title !== undefined) {
     const title = updates.title.trim();
@@ -411,5 +472,5 @@ export function updatePageSettings(page: FramePage, updates: PageSettingsUpdates
     settings.backgroundColor = updates.backgroundColor.trim();
   }
 
-  return finish({ ...page, settings });
+  return finish({ ...page, name, slug, settings });
 }

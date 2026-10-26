@@ -5,6 +5,8 @@ import { AlertTriangle, ArrowLeft, Check, Loader2, Redo2, Undo2 } from "lucide-r
 import { cn } from "@/lib/cn";
 import { FrameMark } from "@/features/dashboard/components/FrameMark";
 import { ViewportControls } from "@/features/editor/components/ViewportControls";
+import { PageMenu } from "@/features/editor/components/PageMenu";
+import type { PageCommands } from "@/features/editor/usePageCommands";
 import { useEditorStore } from "@/features/editor/stores/editorStore";
 import { validateProjectName, type FrameProject } from "@/features/document/model";
 import { renameProject } from "@/features/projects/services/projectService";
@@ -19,25 +21,36 @@ interface EditorToolbarProps {
   onProjectRenamed: (project: FrameProject) => void;
   /** Fits the document viewport to the visible canvas (wired to the canvas ref). */
   onFitToWorkspace: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  /** Page management actions for the current page (spec §20). */
+  pageCommands: PageCommands;
 }
 
 const toolbarButton =
-  "inline-flex h-7 items-center justify-center rounded px-2 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+  "inline-flex h-7 items-center justify-center rounded px-2 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 disabled:pointer-events-none disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
 
 /**
  * Top application toolbar (spec §8): identity + inline project rename +
  * save status on the left, history/page/viewport controls in the center,
  * preview/export on the right.
  *
- * Controls whose engines do not exist yet (undo/redo → Phase 7 history,
- * preview/export → Phase 10) ship visibly disabled with an honest reason
- * instead of pretending to work.
+ * Undo/redo drive the page history engine (Phase 7) and disable honestly
+ * when the page has nothing to undo or redo. Preview/export arrive in
+ * Phase 10 and stay visibly disabled instead of pretending to work.
  */
 export function EditorToolbar({
   project,
   repository,
   onProjectRenamed,
   onFitToWorkspace,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  pageCommands,
 }: EditorToolbarProps) {
   const pages = project.pages;
   const currentPageId = useEditorStore((s) => s.currentPageId);
@@ -187,18 +200,32 @@ export function EditorToolbar({
 
       {/* Center: history, page, viewport controls */}
       <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
-        <span title="Undo and redo arrive with the history engine (Phase 7)">
-          <button type="button" disabled className={toolbarButton} aria-disabled="true">
-            <Undo2 className="h-4 w-4" aria-hidden="true" />
-            <span className="sr-only">Undo (unavailable yet)</span>
-          </button>
-        </span>
-        <span title="Undo and redo arrive with the history engine (Phase 7)">
-          <button type="button" disabled className={toolbarButton} aria-disabled="true">
-            <Redo2 className="h-4 w-4" aria-hidden="true" />
-            <span className="sr-only">Redo (unavailable yet)</span>
-          </button>
-        </span>
+        <button
+          type="button"
+          data-testid="undo"
+          onClick={onUndo}
+          disabled={!canUndo}
+          aria-disabled={!canUndo}
+          aria-keyshortcuts="Control+Z Meta+Z"
+          title="Undo (Ctrl/Cmd + Z)"
+          className={toolbarButton}
+        >
+          <Undo2 className="h-4 w-4" aria-hidden="true" />
+          <span className="sr-only">Undo</span>
+        </button>
+        <button
+          type="button"
+          data-testid="redo"
+          onClick={onRedo}
+          disabled={!canRedo}
+          aria-disabled={!canRedo}
+          aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
+          title="Redo (Ctrl/Cmd + Shift + Z or Ctrl + Y)"
+          className={toolbarButton}
+        >
+          <Redo2 className="h-4 w-4" aria-hidden="true" />
+          <span className="sr-only">Redo</span>
+        </button>
 
         <span className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" role="separator" />
 
@@ -217,6 +244,10 @@ export function EditorToolbar({
             ))}
           </select>
         </label>
+
+        {currentPage !== undefined && (
+          <PageMenu pages={pages} currentPage={currentPage} commands={pageCommands} />
+        )}
 
         <span className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" role="separator" />
 

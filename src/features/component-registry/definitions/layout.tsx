@@ -123,6 +123,10 @@ export const gridComponent = defineComponent({
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: 16,
   }),
+  // One column on phones: grids respond predictably (spec §16).
+  defaultResponsiveStyles: () => ({
+    mobile: { gridTemplateColumns: "repeat(1, minmax(0, 1fr))" },
+  }),
   controls: [
     field.styleColumns("gridTemplateColumns", "Columns"),
     field.styleUnit("gap", "Gap"),

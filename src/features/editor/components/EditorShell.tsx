@@ -30,7 +30,10 @@ import { PanelResizeHandle } from "@/features/editor/components/PanelResizeHandl
 import { PropertiesInspector } from "@/features/editor/components/PropertiesInspector";
 import { StatusBar } from "@/features/editor/components/StatusBar";
 import { useEditorStore } from "@/features/editor/stores/editorStore";
+import { useCanRedo, useCanUndo, useHistoryStore } from "@/features/editor/stores/historyStore";
+import { useEditorShortcuts } from "@/features/editor/useEditorShortcuts";
 import { usePageCommands } from "@/features/editor/usePageCommands";
+import { useAssetUrls } from "@/features/assets/hooks/useAssetUrls";
 import type { ProjectRepository } from "@/features/projects/types";
 
 /** Below this width the sidebars auto-collapse once so the canvas stays usable. */
@@ -104,6 +107,36 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
     project,
     repository,
     onProjectChanged,
+  });
+
+  // Phase 7 history: undo/redo availability for the page in view. Each page
+  // has its own stack, so switching pages never applies the wrong history
+  // (spec §14); loading a different project starts a fresh session.
+  const historyPageId = currentPage?.id ?? null;
+  const canUndo = useCanUndo(historyPageId);
+  const canRedo = useCanRedo(historyPageId);
+  // Stored image assets resolve to object URLs for canvas and inspector (§19).
+  const assetUrls = useAssetUrls(repository, project.assets);
+  const clearHistory = useHistoryStore((s) => s.clearAll);
+  useEffect(() => {
+    clearHistory();
+  }, [project.id, clearHistory]);
+
+  // Keyboard shortcuts (spec §25). They are ignored inside text fields and
+  // only consume browser shortcuts when the editor performed the action.
+  useEditorShortcuts({
+    undo: pageCommands.undo,
+    redo: pageCommands.redo,
+    duplicate: pageCommands.duplicateSelected,
+    deleteSelected: pageCommands.deleteSelected,
+    copy: pageCommands.copySelected,
+    paste: pageCommands.pasteClipboard,
+    clearSelection: () => {
+      const editor = useEditorStore.getState();
+      if (editor.selectedNodeId === null) return false;
+      editor.selectNode(null);
+      return true;
+    },
   });
 
   // Phase 6: one dnd-kit context drives library→canvas, library→layers, and
@@ -291,6 +324,11 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
         repository={repository}
         onProjectRenamed={onProjectChanged}
         onFitToWorkspace={() => fitToWorkspace(canvasRef.current?.clientWidth ?? 0)}
+        onUndo={pageCommands.undo}
+        onRedo={pageCommands.redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        pageCommands={pageCommands}
       />
 
       <DndContext
@@ -344,6 +382,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
           <CanvasWorkspace
             page={currentPage}
             scrollerRef={canvasRef}
+            assetUrls={assetUrls}
             onInsertFirstSection={() => pageCommands.insertComponent("section")}
           />
 
@@ -379,7 +418,12 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
                     <span className="sr-only">Collapse inspector</span>
                   </button>
                   <div className="min-w-0 flex-1">
-                    <PropertiesInspector page={currentPage} commands={pageCommands} />
+                    <PropertiesInspector
+                      page={currentPage}
+                      commands={pageCommands}
+                      pages={project.pages}
+                      assetUrls={assetUrls}
+                    />
                   </div>
                 </div>
               </aside>

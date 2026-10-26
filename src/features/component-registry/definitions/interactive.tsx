@@ -8,13 +8,16 @@ import {
 import { defineComponent } from "@/features/component-registry/define";
 import { stylesToCss } from "@/features/component-registry/styles";
 import { booleanProp, stringProp } from "@/features/component-registry/props";
+import { PAGE_HREF_PREFIX } from "@/features/document/navigation";
 
 /**
- * Safe link destinations (spec §32): relative/# links, http(s), mailto, tel.
+ * Safe link destinations (spec §20, §32): relative/# links, http(s),
+ * mailto, tel, and internal project pages (`page:<slug>`).
  * `javascript:` and other active schemes are rejected by the schema.
  */
 export function isSafeHref(value: string): boolean {
   if (value.trim() === "") return false;
+  if (value.trim().startsWith(PAGE_HREF_PREFIX)) return true;
   if (!value.includes(":")) return true; // relative path, "#anchor", "/page"
   return /^(https?|mailto|tel):/i.test(value.trim());
 }
@@ -33,7 +36,7 @@ export const buttonComponent = defineComponent({
   defaultProps: { label: "Button", href: "#" },
   controls: [
     field.propText("label", "Label"),
-    field.propUrl("href", "Destination"),
+    field.propLink("href", "Destination"),
     field.styleUnit("padding", "Padding", ["px"]),
     field.styleUnit("borderRadius", "Corner radius"),
     field.styleColor("backgroundColor", "Background"),
@@ -83,7 +86,7 @@ export const linkComponent = defineComponent({
   defaultStyles: () => ({ color: "#2563eb", textDecoration: "underline", fontSize: 14 }),
   controls: [
     field.propText("label", "Label"),
-    field.propUrl("href", "Destination"),
+    field.propLink("href", "Destination"),
     field.styleColor("color", "Text color"),
     field.styleSelect("textDecoration", "Decoration", TEXT_DECORATION_OPTIONS),
     field.styleUnit("fontSize", "Font size"),

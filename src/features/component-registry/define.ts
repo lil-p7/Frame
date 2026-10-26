@@ -1,4 +1,4 @@
-import type { FrameNode, StyleValue } from "@/features/document/model";
+import type { FrameNode, ResponsiveStyles, StyleValue } from "@/features/document/model";
 import { createId } from "@/lib/ids";
 import type { InspectorField } from "@/features/component-registry/inspector";
 import type { ComponentDefinition } from "@/features/component-registry/types";
@@ -20,6 +20,8 @@ export interface ComponentSpec {
   propSchema: ComponentDefinition["propSchema"];
   defaultProps?: Record<string, unknown>;
   defaultStyles?: () => Record<string, StyleValue>;
+  /** Default breakpoint overrides (grids collapse, navbars stack, ...). */
+  defaultResponsiveStyles?: () => ResponsiveStyles;
   /** Defaults for composite presets (Navbar/Hero/Footer). */
   defaultChildren?: () => FrameNode[];
   renderEditor: ComponentDefinition["renderEditor"];
@@ -44,6 +46,8 @@ export function defineComponent(spec: ComponentSpec): ComponentDefinition {
     propSchema: spec.propSchema,
     createDefaultProps: () => structuredClone(spec.defaultProps ?? {}),
     createDefaultStyles: () => (spec.defaultStyles ? spec.defaultStyles() : {}),
+    createDefaultResponsiveStyles: () =>
+      spec.defaultResponsiveStyles ? spec.defaultResponsiveStyles() : {},
     createDefaultChildren: () =>
       spec.acceptsChildren && spec.defaultChildren ? spec.defaultChildren() : [],
     validateProps: (props) => spec.propSchema.safeParse(props).success,
@@ -67,6 +71,7 @@ export function buildNode(definition: ComponentDefinition): FrameNode {
     name: definition.label,
     props: definition.createDefaultProps(),
     styles: definition.createDefaultStyles(),
+    responsive: definition.createDefaultResponsiveStyles(),
     children: definition.createDefaultChildren(),
     editor: { hidden: false, locked: false },
   };

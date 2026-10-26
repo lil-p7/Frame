@@ -13,13 +13,38 @@ export const PROJECT_SCHEMA_VERSION = 1;
 /** A style override value. `null` means "clear this override". */
 export type StyleValue = string | number | null;
 
+/**
+ * Breakpoints that can carry style overrides (spec §16).
+ *
+ * `styles` on a node is the base (desktop) record; these are the optional,
+ * independent narrower-range overrides. The desktop range has no override
+ * record because it *is* the base.
+ */
+export const RESPONSIVE_BREAKPOINTS = ["tablet", "mobile"] as const;
+export type BreakpointId = (typeof RESPONSIVE_BREAKPOINTS)[number];
+/** Editing context: the base styles or one breakpoint's overrides. */
+export type StyleBreakpoint = "base" | BreakpointId;
+
+/** Style overrides for every breakpoint, keyed by breakpoint ID. */
+export type ResponsiveStyles = Partial<Record<BreakpointId, Record<string, StyleValue>>>;
+
 const styleValueSchema = z.union([z.string(), z.number(), z.null()]);
 const styleOverridesSchema = z.record(z.string(), styleValueSchema);
 
+const responsiveStylesSchema = z
+  .object({
+    tablet: styleOverridesSchema.optional(),
+    mobile: styleOverridesSchema.optional(),
+  })
+  .strict()
+  .optional();
+
 /**
  * A single node in a page's component tree.
- * Phase 3 gives each component type a concrete props schema; until then
- * props are validated as a serializable record.
+ *
+ * `styles` holds the base (desktop) declarations; `responsive` holds optional
+ * independent overrides for narrower breakpoints (spec §16). Absent means no
+ * overrides — existing projects stay readable without a schema migration.
  */
 export interface FrameNode {
   id: string;
@@ -27,6 +52,7 @@ export interface FrameNode {
   name: string;
   props: Record<string, unknown>;
   styles: Record<string, StyleValue>;
+  responsive?: ResponsiveStyles;
   children: FrameNode[];
   editor: {
     hidden: boolean;
@@ -41,6 +67,7 @@ const frameNodeSchema: z.ZodType<FrameNode> = z.lazy(() =>
     name: z.string(),
     props: z.record(z.string(), z.unknown()),
     styles: styleOverridesSchema,
+    responsive: responsiveStylesSchema,
     children: z.array(frameNodeSchema),
     editor: z.object({
       hidden: z.boolean(),
@@ -204,6 +231,7 @@ export function createRootNode(id: string): FrameNode {
     name: "Root",
     props: {},
     styles: {},
+    responsive: {},
     children: [],
     editor: { hidden: false, locked: false },
   };

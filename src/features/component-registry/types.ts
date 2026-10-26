@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { z } from "zod";
-import type { FrameNode, StyleValue } from "@/features/document/model";
+import type { FrameNode, ResponsiveStyles, StyleValue } from "@/features/document/model";
 import type { InspectorField } from "@/features/component-registry/inspector";
 
 /** Library grouping (spec §9B): Layout, Text, Media, Interactive, Structure. */
@@ -43,8 +43,10 @@ export interface ComponentDefinition {
   propSchema: z.ZodType;
   /** Fresh default props for a new node (never shared between nodes). */
   createDefaultProps: () => Record<string, unknown>;
-  /** Fresh default styles for a new node. */
+  /** Fresh default styles for a new node (base/desktop record). */
   createDefaultStyles: () => Record<string, StyleValue>;
+  /** Fresh default breakpoint overrides for a new node (spec §16). */
+  createDefaultResponsiveStyles: () => ResponsiveStyles;
   /** Fresh default children (used by composite presets like Navbar). */
   createDefaultChildren: () => FrameNode[];
 

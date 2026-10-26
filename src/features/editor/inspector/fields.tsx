@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
-import { RotateCcw } from "lucide-react";
-import type { FrameNode, StyleValue } from "@/features/document/model";
+import { Image, RotateCcw, Upload } from "lucide-react";
+import type { FrameNode, FramePage, StyleValue } from "@/features/document/model";
+import { storageKeyFromSrc } from "@/features/assets/service";
+import { PAGE_HREF_PREFIX, resolveHref } from "@/features/document/navigation";
 import {
   colorPickerValue,
   isHexColor,
@@ -123,12 +125,20 @@ function useLocalDraft(
 type InputParser = (raw: string) => StyleValue | null;
 
 /** Dispatches on the declaration to the right control. */
+/** How the displayed style value relates to the active breakpoint (§16). */
+export type BreakpointBadge = "inherited" | "override";
+
 export function InspectorFieldRow({
   field,
   node,
   onCommit,
   onReset,
   identityPrefix,
+  breakpointBadge,
+  canReset = true,
+  onAssetUpload,
+  assetUrls,
+  pages,
 }: {
   field: InspectorField;
   node: FrameNode;
@@ -137,6 +147,16 @@ export function InspectorFieldRow({
   /** Resets to the definition fast default (props) or clears override (styles). */
   onReset: (field: InspectorField) => void;
   identityPrefix: string;
+  /** Set on style fields while editing a narrower breakpoint (spec §16). */
+  breakpointBadge?: BreakpointBadge;
+  /** False for an inherited breakpoint value: there is no override to reset. */
+  canReset?: boolean;
+  /** Uploads a new image for an `asset` field (spec §19). */
+  onAssetUpload?: (file: File) => void;
+  /** Object URLs for stored assets, used for previews. */
+  assetUrls?: Readonly<Record<string, string>>;
+  /** Project pages for the `link` destination picker (spec §20). */
+  pages?: readonly FramePage[];
 }) {
   const identity = `${identityPrefix}:${field.target}.${field.key}`;
   const value =
@@ -147,14 +167,34 @@ export function InspectorFieldRow({
 
   return (
     <div className={rowClass} data-testid={`field-${testKey}`}>
-      <div className="flex items-center justify-between gap-1">
+      <div className="flex items-center gap-1">
         <label htmlFor={`${testKey}-input`} className={labelClass}>
           {field.label}
         </label>
+        {breakpointBadge !== undefined && (
+          <span
+            data-testid={`${testKey}-breakpoint`}
+            title={
+              breakpointBadge === "override"
+                ? "Overridden at this breakpoint — reset to inherit the Desktop value"
+                : "Inherited from the Desktop (base) styles"
+            }
+            className={cn(
+              "rounded px-1 py-px text-[9px] font-medium uppercase tracking-wide",
+              breakpointBadge === "override"
+                ? "bg-blue-600/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+            )}
+          >
+            {breakpointBadge === "override" ? "Override" : "Inherited"}
+          </span>
+        )}
         <button
           type="button"
           data-testid={`${testKey}-reset`}
-          className="ml-auto rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+          disabled={!canReset}
+          title={canReset ? `Reset ${field.label}` : "Inherited from Desktop — nothing to reset"}
+          className="ml-auto rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
           aria-label={`Reset ${field.label}`}
           onClick={() => onReset(field)}
         >
@@ -162,8 +202,20 @@ export function InspectorFieldRow({
         </button>
       </div>
       <div className="min-w-0">
-        {renderControl(field.control, identity, value, testKey, (parsed) =>
-          onCommit(field, parsed),
+        {renderControl(
+          field.control,
+          identity,
+          value,
+          testKey,
+          (parsed) => onCommit(field, parsed),
+          {
+            onAssetUpload,
+            assetUrl:
+              field.control.type === "asset" && assetUrls !== undefined
+                ? assetUrls[storageKeyFromSrc(value) ?? ""]
+                : undefined,
+            pages,
+          },
         )}
       </div>
     </div>
@@ -176,6 +228,11 @@ function renderControl(
   value: StyleValue,
   testKey: string,
   commit: (value: StyleValue) => void,
+  extras: {
+    onAssetUpload?: (file: File) => void;
+    assetUrl?: string;
+    pages?: readonly FramePage[];
+  },
 ): ReactNode {
   switch (control.type) {
     case "text":
@@ -220,6 +277,27 @@ function renderControl(
       );
     case "opacity":
       return <OpacityInput committed={value} testKey={testKey} commit={commit} />;
+    case "asset":
+      return (
+        <AssetInput
+          identity={identity}
+          committed={value}
+          testKey={testKey}
+          commit={commit}
+          onUpload={extras.onAssetUpload}
+          assetUrl={extras.assetUrl}
+        />
+      );
+    case "link":
+      return (
+        <LinkInput
+          identity={identity}
+          committed={value}
+          testKey={testKey}
+          commit={commit}
+          pages={extras.pages ?? []}
+        />
+      );
     case "select":
       return (
         <SelectInput
@@ -248,6 +326,147 @@ function renderControl(
         <ColumnsInput identity={identity} committed={value} testKey={testKey} commit={commit} />
       );
   }
+}
+
+/**
+ * Destination: text input for external URLs plus a picker for this
+ * project's pages (spec §20 internal navigation). A destination whose page
+ * was deleted is reported instead of silently kept (§20).
+ */
+function LinkInput({
+  identity,
+  committed,
+  testKey,
+  commit,
+  pages,
+}: {
+  identity: string;
+  committed: StyleValue;
+  testKey: string;
+  commit: (value: StyleValue) => void;
+  pages: readonly FramePage[];
+}) {
+  const href = typeof committed === "string" ? committed : "";
+  const resolution = resolveHref(href, pages);
+  const selected = resolution.kind === "page" ? `${PAGE_HREF_PREFIX}${resolution.slug}` : "";
+  const broken = resolution.kind === "page" && resolution.pageId === null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <TextInput
+        identity={identity}
+        committed={committed}
+        testKey={testKey}
+        multiline={false}
+        format={(value) => (typeof value === "string" ? value : "")}
+        parse={(raw) => raw}
+        onCommitParsed={commit}
+      />
+      <select
+        value={selected}
+        aria-label="Link to a page"
+        data-testid={`${testKey}-page`}
+        onChange={(event) => {
+          if (event.target.value !== "") commit(event.target.value);
+        }}
+        className={inputClass}
+      >
+        <option value="">Link to a page…</option>
+        {pages.map((page) => (
+          <option key={page.id} value={`${PAGE_HREF_PREFIX}${page.slug}`}>
+            {page.name}
+          </option>
+        ))}
+      </select>
+      {broken && (
+        <p data-testid={`${testKey}-broken`} className="text-[10px] text-red-600 dark:text-red-400">
+          This page no longer exists — choose another destination.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Image source: text input for external URLs plus local upload/replace/
+ * remove actions (spec §19 initial image workflow). The preview shows the
+ * stored asset's object URL (or the external URL as-is).
+ */
+function AssetInput({
+  identity,
+  committed,
+  testKey,
+  commit,
+  onUpload,
+  assetUrl,
+}: {
+  identity: string;
+  committed: StyleValue;
+  testKey: string;
+  commit: (value: StyleValue) => void;
+  onUpload?: (file: File) => void;
+  assetUrl?: string;
+}) {
+  const key = storageKeyFromSrc(committed);
+  const external = typeof committed === "string" && committed.trim() !== "" && key === null;
+  const previewSrc = key !== null ? assetUrl : external ? committed : null;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <TextInput
+        identity={identity}
+        committed={committed}
+        testKey={testKey}
+        multiline={false}
+        format={(value) => (typeof value === "string" ? value : "")}
+        parse={(raw) => raw}
+        onCommitParsed={commit}
+      />
+      <div className="flex items-center gap-2">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+          {previewSrc !== null && previewSrc !== "" ? (
+            <img
+              src={previewSrc}
+              alt=""
+              data-testid={`${testKey}-preview`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <Image className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+          )}
+        </span>
+        <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-blue-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
+          <Upload className="h-3 w-3" aria-hidden="true" />
+          {key !== null ? "Replace" : "Upload"}
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            data-testid={`${testKey}-upload`}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file !== undefined && onUpload !== undefined) onUpload(file);
+            }}
+          />
+        </label>
+        <button
+          type="button"
+          data-testid={`${testKey}-remove`}
+          disabled={committed === null || committed === ""}
+          onClick={() => commit("")}
+          className="rounded border border-zinc-200 px-2 py-1 text-[11px] text-zinc-500 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        >
+          Remove
+        </button>
+      </div>
+      {key !== null && (
+        <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+          Uploaded image — stored with this project.
+        </p>
+      )}
+    </div>
+  );
 }
 
 function parseNumeric(

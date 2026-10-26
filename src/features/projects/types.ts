@@ -1,4 +1,5 @@
 import type { FrameProject } from "@/features/document/model";
+import type { AssetRepository } from "@/features/assets/types";
 
 /**
  * Lightweight dashboard row. `corrupt` marks records that failed schema
@@ -21,8 +22,11 @@ export interface CreateProjectInput {
 /**
  * High-level project operations. All methods return explicit results and
  * throw `PersistenceError` on storage failure.
+ *
+ * Extends `AssetRepository` (spec §31: "Refine the interface as required for
+ * asset storage") so uploads share one persistence adapter with projects.
  */
-export interface ProjectRepository {
+export interface ProjectRepository extends AssetRepository {
   listProjects(): Promise<FrameProject[]>;
   getProject(id: string): Promise<FrameProject | null>;
   saveProject(project: FrameProject): Promise<void>;

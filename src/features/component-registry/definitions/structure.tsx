@@ -114,6 +114,10 @@ export const navbarComponent = defineComponent({
     padding: 16,
     backgroundColor: "#ffffff",
   }),
+  // Defined mobile behavior: the bar stacks instead of squeezing (spec §16).
+  defaultResponsiveStyles: () => ({
+    mobile: { flexDirection: "column", alignItems: "flex-start", gap: 12 },
+  }),
   controls: [
     field.styleSelect("alignItems", "Align items", ALIGN_ITEMS_OPTIONS),
     field.styleUnit("gap", "Gap"),
@@ -160,6 +164,8 @@ export const heroComponent = defineComponent({
     gap: 16,
     backgroundColor: "#ffffff",
   }),
+  // Tighter padding keeps hero copy readable at phone widths (spec §16).
+  defaultResponsiveStyles: () => ({ mobile: { padding: 32 } }),
   controls: [
     field.styleUnit("padding", "Padding"),
     field.styleUnit("minHeight", "Min height"),

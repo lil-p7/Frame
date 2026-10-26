@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Box,
@@ -11,25 +11,38 @@ import {
   LockOpen,
   Trash2,
 } from "lucide-react";
-import type { FramePage, StyleValue } from "@/features/document/model";
+import type { FramePage, StyleBreakpoint, StyleValue } from "@/features/document/model";
 import { ROOT_NODE_TYPE } from "@/features/document/model";
 import {
+  BREAKPOINT_LABELS,
+  BREAKPOINT_RANGES,
+  breakpointForWidth,
+  getBreakpointStyles,
+  resolveNodeStyles,
+} from "@/features/document/responsive";
+import {
+  colorPickerValue,
   fieldsForSection,
   hasSection,
   INSPECTOR_SECTIONS,
+  isHexColor,
   type InspectorField,
   type InspectorSection,
 } from "@/features/component-registry/inspector";
 import { getComponent } from "@/features/component-registry/registry";
 import { countNodes, getPath } from "@/features/document/traversal";
 import { InspectorFieldRow } from "@/features/editor/inspector/fields";
-import { useEditorStore } from "@/features/editor/stores/editorStore";
+import { resolveViewportWidth, useEditorStore } from "@/features/editor/stores/editorStore";
 import type { PageCommands } from "@/features/editor/usePageCommands";
 import { cn } from "@/lib/cn";
 
 interface PropertiesInspectorProps {
   page: FramePage;
   commands: PageCommands;
+  /** All project pages: link destinations can target them (spec §20). */
+  pages: readonly FramePage[];
+  /** Object URLs for stored image assets (spec §19 previews). */
+  assetUrls: Readonly<Record<string, string>>;
 }
 
 const SECTION_LABELS: Record<InspectorSection, string> = {
@@ -50,8 +63,19 @@ const SECTION_LABELS: Record<InspectorSection, string> = {
  * command; style resets clear the override so definition defaults show
  * through (spec §17).
  */
-export function PropertiesInspector({ page, commands }: PropertiesInspectorProps) {
+export function PropertiesInspector({
+  page,
+  commands,
+  pages,
+  assetUrls,
+}: PropertiesInspectorProps) {
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
+  const viewportSelection = useEditorStore((s) => s.viewportSelection);
+  const customViewportWidth = useEditorStore((s) => s.customViewportWidth);
+  // Style edits target the breakpoint the current viewport renders (spec §16).
+  const breakpoint: StyleBreakpoint = breakpointForWidth(
+    resolveViewportWidth({ viewportSelection, customViewportWidth }),
+  );
   const path = selectedNodeId === null ? null : getPath(page.root, selectedNodeId);
   const node = path?.at(-1) ?? null;
 
@@ -60,14 +84,17 @@ export function PropertiesInspector({ page, commands }: PropertiesInspectorProps
 
   if (node === null || node.type === ROOT_NODE_TYPE) {
     return (
-      <div className="flex h-full flex-col gap-2 p-4" data-testid="inspector-empty">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Properties
-        </h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">Nothing selected</p>
-        <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-          Click a component on the canvas or in the Layers panel to edit its properties.
-        </p>
+      <div className="flex h-full flex-col gap-3 p-4" data-testid="inspector-empty">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Properties
+          </h2>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">Nothing selected</p>
+          <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            Click a component on the canvas or in the Layers panel to edit its properties.
+          </p>
+        </div>
+        <PageSettingsFields page={page} commands={commands} />
       </div>
     );
   }
@@ -76,11 +103,17 @@ export function PropertiesInspector({ page, commands }: PropertiesInspectorProps
   const fields = definition?.controls ?? [];
   const ancestors = path!.slice(0, -1).map((ancestor) => ancestor.name);
 
+  // Values shown are the effective breakpoint values (base merged with the
+  // active overrides); the stored node is never rewritten to display them.
+  const overrides = breakpoint === "base" ? {} : getBreakpointStyles(node, breakpoint);
+  const displayedNode =
+    breakpoint === "base" ? node : { ...node, styles: resolveNodeStyles(node, breakpoint) };
+
   const commitField = (field: InspectorField, value: StyleValue): void => {
     if (field.target === "prop") {
       commands.updateLayerProps(node.id, { [field.key]: value });
     } else {
-      commands.updateLayerStyles(node.id, { [field.key]: value });
+      commands.updateLayerStyles(node.id, { [field.key]: value }, breakpoint);
     }
   };
 
@@ -89,8 +122,14 @@ export function PropertiesInspector({ page, commands }: PropertiesInspectorProps
       const defaults = definition?.createDefaultProps() ?? {};
       if (!(field.key in defaults)) return; // no default to restore
       commands.updateLayerProps(node.id, { [field.key]: defaults[field.key] });
-    } else {
+      return;
+    }
+    // Breakpoint reset removes only that override, restoring inheritance;
+    // base reset clears the declaration (spec §16/§17).
+    if (breakpoint === "base") {
       commands.updateLayerStyles(node.id, { [field.key]: null });
+    } else if (overrides[field.key] !== undefined) {
+      commands.updateLayerStyles(node.id, { [field.key]: null }, breakpoint);
     }
   };
 
@@ -111,6 +150,22 @@ export function PropertiesInspector({ page, commands }: PropertiesInspectorProps
       </header>
 
       <div className="flex flex-col">
+        {breakpoint !== "base" && (
+          <div
+            data-testid="breakpoint-banner"
+            role="note"
+            className="border-b border-blue-200 bg-blue-50/70 px-4 py-2 dark:border-blue-900 dark:bg-blue-950/30"
+          >
+            <p className="text-[11px] font-medium text-blue-800 dark:text-blue-300">
+              Editing {BREAKPOINT_LABELS[breakpoint]} styles
+            </p>
+            <p className="mt-0.5 text-[10px] leading-snug text-blue-700/80 dark:text-blue-300/70">
+              Applies at {BREAKPOINT_RANGES[breakpoint]}. Unchanged fields inherit the Desktop
+              values; reset a field to remove its override.
+            </p>
+          </div>
+        )}
+
         {ancestors.length > 0 && (
           <p
             className="break-words px-4 pt-3 text-[11px] text-zinc-500 dark:text-zinc-400"
@@ -146,16 +201,31 @@ export function PropertiesInspector({ page, commands }: PropertiesInspectorProps
               </button>
               {!isCollapsed && (
                 <div className="flex flex-col gap-3 px-4 pb-3">
-                  {fieldsForSection(fields, section).map((field) => (
-                    <InspectorFieldRow
-                      key={`${field.target}.${field.key}`}
-                      field={field}
-                      node={node}
-                      onCommit={commitField}
-                      onReset={resetField}
-                      identityPrefix={node.id}
-                    />
-                  ))}
+                  {fieldsForSection(fields, section).map((field) => {
+                    const isStyle = field.target === "style";
+                    const overridden = isStyle && overrides[field.key] !== undefined;
+                    return (
+                      <InspectorFieldRow
+                        key={`${field.target}.${field.key}`}
+                        field={field}
+                        node={displayedNode}
+                        onCommit={commitField}
+                        onReset={resetField}
+                        identityPrefix={node.id}
+                        breakpointBadge={
+                          isStyle && breakpoint !== "base"
+                            ? overridden
+                              ? "override"
+                              : "inherited"
+                            : undefined
+                        }
+                        canReset={!isStyle || breakpoint === "base" || overridden}
+                        pages={pages}
+                        assetUrls={assetUrls}
+                        onAssetUpload={(file) => void commands.uploadImageForNode(node.id, file)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -287,5 +357,178 @@ function DetailRow({
         {value}
       </dd>
     </div>
+  );
+}
+
+const settingsInputClass =
+  "h-7 w-full rounded border border-zinc-300 bg-white px-2 text-xs text-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
+const settingsLabelClass =
+  "flex flex-col gap-0.5 text-[11px] font-medium text-zinc-600 dark:text-zinc-400";
+
+/**
+ * Page settings for the selected page (spec §20 page configuration), shown
+ * while nothing is selected. Every field commits through the validated page
+ * command, so invalid input is rejected with a toast and the document keeps
+ * its last valid value; focus is never lost while typing (§11).
+ */
+function PageSettingsFields({ page, commands }: { page: FramePage; commands: PageCommands }) {
+  return (
+    <section
+      className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800"
+      data-testid="page-settings"
+    >
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        Page settings
+      </h3>
+      <SettingsField
+        label="Page name"
+        testId="page-name"
+        value={page.name}
+        onCommit={(value) => void commands.updatePageSettings({ name: value })}
+      />
+      <SettingsField
+        label="Slug"
+        testId="page-slug"
+        value={page.slug}
+        onCommit={(value) => void commands.updatePageSettings({ slug: value })}
+      />
+      <SettingsField
+        label="Page title"
+        testId="page-title"
+        value={page.settings.title}
+        onCommit={(value) => void commands.updatePageSettings({ title: value })}
+      />
+      <PageBackgroundField background={page.settings.backgroundColor} commands={commands} />
+    </section>
+  );
+}
+
+function SettingsField({
+  label,
+  testId,
+  value,
+  onCommit,
+}: {
+  label: string;
+  testId: string;
+  value: string;
+  onCommit: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const focusedRef = useRef(false);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+
+  // Resync only while unfocused, so a save round-trip never clobbers typing.
+  useEffect(() => {
+    if (!focusedRef.current) setDraft(value);
+  }, [value]);
+
+  const commit = (): void => {
+    if (draftRef.current !== value) onCommit(draftRef.current);
+  };
+
+  return (
+    <label className={settingsLabelClass}>
+      {label}
+      <input
+        value={draft}
+        data-testid={`${testId}-input`}
+        onFocus={() => {
+          focusedRef.current = true;
+        }}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+          if (event.key === "Escape") {
+            setDraft(value);
+            draftRef.current = value;
+            event.currentTarget.blur();
+          }
+        }}
+        onBlur={() => {
+          focusedRef.current = false;
+          commit();
+        }}
+        className={settingsInputClass}
+      />
+    </label>
+  );
+}
+
+function PageBackgroundField({
+  background,
+  commands,
+}: {
+  background: string;
+  commands: PageCommands;
+}) {
+  const [draft, setDraft] = useState(background);
+  const [error, setError] = useState<string | null>(null);
+  const focusedRef = useRef(false);
+
+  useEffect(() => {
+    if (!focusedRef.current) setDraft(background);
+  }, [background]);
+
+  const commit = (): void => {
+    if (draft === background) return;
+    if (!isHexColor(draft)) {
+      setError("Use a hex color like #ffffff.");
+      setDraft(background);
+      return;
+    }
+    setError(null);
+    void commands.updatePageSettings({ backgroundColor: draft });
+  };
+
+  return (
+    <label className={settingsLabelClass}>
+      Background
+      <span className="flex items-center gap-2">
+        <input
+          value={draft}
+          data-testid="page-background-input"
+          aria-invalid={error !== null}
+          onFocus={() => {
+            focusedRef.current = true;
+          }}
+          onChange={(event) => {
+            setDraft(event.target.value);
+            setError(null);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+            if (event.key === "Escape") {
+              setDraft(background);
+              setError(null);
+              event.currentTarget.blur();
+            }
+          }}
+          onBlur={() => {
+            focusedRef.current = false;
+            commit();
+          }}
+          className={settingsInputClass}
+        />
+        <input
+          type="color"
+          value={colorPickerValue(background)}
+          aria-label="Pick page background color"
+          data-testid="page-background-color"
+          onChange={(event) => {
+            setError(null);
+            setDraft(event.target.value);
+            void commands.updatePageSettings({ backgroundColor: event.target.value });
+          }}
+          className="h-7 w-8 shrink-0 cursor-pointer rounded border border-zinc-300 bg-transparent p-0 dark:border-zinc-700"
+        />
+      </span>
+      {error !== null && (
+        <span role="alert" className="text-[10px] text-red-600 dark:text-red-400">
+          {error}
+        </span>
+      )}
+    </label>
   );
 }

@@ -1,7 +1,14 @@
 import type { RefObject } from "react";
 import { GripVertical } from "lucide-react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { ROOT_NODE_TYPE, type FrameNode, type FramePage } from "@/features/document/model";
+import {
+  ROOT_NODE_TYPE,
+  type FrameNode,
+  type FramePage,
+  type StyleBreakpoint,
+} from "@/features/document/model";
+import { breakpointForWidth, withResolvedStyles } from "@/features/document/responsive";
+import { resolveNodeAssetSrc } from "@/features/assets/service";
 import { getComponent } from "@/features/component-registry/registry";
 import type { DragPayload } from "@/features/editor/dnd/dropResolution";
 import { resolveViewportWidth, useEditorStore } from "@/features/editor/stores/editorStore";
@@ -11,6 +18,8 @@ interface CanvasWorkspaceProps {
   page: FramePage;
   /** Shared so the toolbar's "fit" control can measure the visible area. */
   scrollerRef: RefObject<HTMLDivElement | null>;
+  /** Object URLs for the project's stored image assets (spec §19). */
+  assetUrls?: Readonly<Record<string, string>>;
   /** Optional click-to-insert action for the empty-canvas call to action (spec §10). */
   onInsertFirstSection?: () => void;
 }
@@ -27,7 +36,12 @@ interface CanvasWorkspaceProps {
  * Zoom uses the CSS `zoom` property: the document frame keeps its declared
  * width (Phase 2 acceptance), only presentation scales.
  */
-export function CanvasWorkspace({ page, scrollerRef, onInsertFirstSection }: CanvasWorkspaceProps) {
+export function CanvasWorkspace({
+  page,
+  scrollerRef,
+  assetUrls = {},
+  onInsertFirstSection,
+}: CanvasWorkspaceProps) {
   const viewportSelection = useEditorStore((s) => s.viewportSelection);
   const customViewportWidth = useEditorStore((s) => s.customViewportWidth);
   const zoom = useEditorStore((s) => s.zoom);
@@ -35,6 +49,9 @@ export function CanvasWorkspace({ page, scrollerRef, onInsertFirstSection }: Can
   const drag = useEditorStore((s) => s.drag);
 
   const viewportWidth = resolveViewportWidth({ viewportSelection, customViewportWidth });
+  // Breakpoint styles shown on the canvas are exactly the ones the document
+  // resolves at this width (spec §16): the editor is the live CSS behavior.
+  const breakpoint = breakpointForWidth(viewportWidth);
 
   // The whole page boundary is a droppable zone: drops on empty pages,
   // padding, or between children resolve through it (spec §10, §15).
@@ -60,6 +77,7 @@ export function CanvasWorkspace({ page, scrollerRef, onInsertFirstSection }: Can
       <div
         ref={setPageDroppableRef}
         data-testid="document-viewport"
+        data-breakpoint={breakpoint}
         style={{
           width: `${viewportWidth}px`,
           zoom,
@@ -96,7 +114,12 @@ export function CanvasWorkspace({ page, scrollerRef, onInsertFirstSection }: Can
         ) : (
           <div className="flex min-h-[640px] flex-col gap-2 p-4" data-testid="canvas-document">
             {page.root.children.map((node) => (
-              <CanvasNodeView key={node.id} node={node} />
+              <CanvasNodeView
+                key={node.id}
+                node={node}
+                breakpoint={breakpoint}
+                assetUrls={assetUrls}
+              />
             ))}
           </div>
         )}
@@ -110,7 +133,15 @@ export function CanvasWorkspace({ page, scrollerRef, onInsertFirstSection }: Can
  * overlay wrapper (selection outline, label, click/hover handling).
  * The wrapper is editor chrome and never appears in preview or export.
  */
-function CanvasNodeView({ node }: { node: FrameNode }) {
+function CanvasNodeView({
+  node,
+  breakpoint,
+  assetUrls,
+}: {
+  node: FrameNode;
+  breakpoint: StyleBreakpoint;
+  assetUrls: Readonly<Record<string, string>>;
+}) {
   const selectedNodeId = useEditorStore((s) => s.selectedNodeId);
   const hoveredNodeId = useEditorStore((s) => s.hoveredNodeId);
   const selectNode = useEditorStore((s) => s.selectNode);
@@ -140,12 +171,20 @@ function CanvasNodeView({ node }: { node: FrameNode }) {
   const indicator = dropTargeted ? drag.band : null;
 
   const children = definition?.acceptsChildren
-    ? node.children.map((child) => <CanvasNodeView key={child.id} node={child} />)
+    ? node.children.map((child) => (
+        <CanvasNodeView key={child.id} node={child} breakpoint={breakpoint} assetUrls={assetUrls} />
+      ))
     : null;
 
+  // Definitions render the styles that apply at the active breakpoint and
+  // asset references resolved to object URLs; the stored document is
+  // untouched (editor overlays are separate chrome).
   const content =
     definition !== undefined ? (
-      definition.renderEditor(node, children)
+      definition.renderEditor(
+        resolveNodeAssetSrc(withResolvedStyles(node, breakpoint), assetUrls),
+        children,
+      )
     ) : (
       <UnknownComponentView node={node} />
     );

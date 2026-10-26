@@ -45,6 +45,10 @@ export type FieldControl =
   | { type: "textarea" }
   /** Text validated by the prop schema (safe URLs, src/alt lengths). */
   | { type: "url" }
+  /** Image source: text input plus local upload/replace/remove actions. */
+  | { type: "asset" }
+  /** Destination: text input plus a picker for this project's pages (§20). */
+  | { type: "link" }
   /** Plain number, optionally bounded (prop fields). */
   | { type: "number"; min?: number; max?: number; integer?: boolean; step?: number }
   /** Bounded 0–1 fraction rendered with quick presets. */
@@ -305,6 +309,10 @@ export const field = {
   propTextarea: (key: string, label: string) => prop(key, label, { type: "textarea" }),
   /** Schema-validated URL-ish prop text (image src, href). */
   propUrl: (key: string, label: string) => prop(key, label, { type: "url" }),
+  /** Image source with upload/replace/remove actions (spec §19). */
+  propAsset: (key: string, label: string) => prop(key, label, { type: "asset" }),
+  /** Link destination with the project page picker (spec §20 navigation). */
+  propLink: (key: string, label: string) => prop(key, label, { type: "link" }),
   /** Prop select (heading level, section tag). */
   propSelect: (key: string, label: string, options: readonly SelectOption[]) =>
     prop(key, label, { type: "select", options }),

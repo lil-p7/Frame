@@ -7,7 +7,7 @@ import {
   listProjectSummaries,
   renameProject,
 } from "./projectService";
-import type { FrameProject } from "@/features/document/model";
+import type { FrameNode, FrameProject } from "@/features/document/model";
 import type { CreateProjectInput, ProjectRepository } from "@/features/projects/types";
 import { createId } from "@/lib/ids";
 import { collectNodeIds } from "./testSupport";
@@ -15,10 +15,23 @@ import { collectNodeIds } from "./testSupport";
 /** In-memory adapter mirroring the Dexie persistence contract. */
 function createMemoryRepository(
   initial: FrameProject[] = [],
-): ProjectRepository & { data: FrameProject[] } {
+): ProjectRepository & { data: FrameProject[]; assets: Map<string, unknown> } {
   const data = [...initial];
+  const assets = new Map<string, unknown>();
   return {
     data,
+    assets,
+    putAsset(asset) {
+      assets.set(asset.storageKey, asset.blob);
+      return Promise.resolve();
+    },
+    getAssetBlob(storageKey) {
+      return Promise.resolve((assets.get(storageKey) as Blob | undefined) ?? null);
+    },
+    deleteAsset(storageKey) {
+      assets.delete(storageKey);
+      return Promise.resolve();
+    },
     listProjects() {
       return Promise.resolve([...data]);
     },
@@ -140,5 +153,43 @@ describe("projectService", () => {
 
     await deleteProject(repository, project.id);
     expect(await getProject(repository, project.id)).toBeNull();
+  });
+
+  it("copies assets when duplicating and releases them when deleting (§19)", async () => {
+    const repository = createMemoryRepository();
+    const project = await seedProject(repository);
+    const image: FrameNode = {
+      id: "node-image",
+      type: "image",
+      name: "Image",
+      props: { src: "asset:asset-1", alt: "" },
+      styles: {},
+      children: [],
+      editor: { hidden: false, locked: false },
+    };
+    const attached: FrameProject = {
+      ...project,
+      pages: [{ ...project.pages[0]!, root: { ...project.pages[0]!.root, children: [image] } }],
+      assets: [{ id: "a1", name: "x.png", mimeType: "image/png", size: 4, storageKey: "asset-1" }],
+    };
+    await repository.saveProject(attached);
+    await repository.putAsset({
+      storageKey: "asset-1",
+      mimeType: "image/png",
+      blob: new Blob([new Uint8Array([1, 2, 3, 4])]),
+    });
+
+    // Duplicating owns fresh blobs and rewrites the copy's references.
+    const copy = await duplicateProject(repository, attached.id);
+    expect(copy.assets).toHaveLength(1);
+    const copyKey = copy.assets[0]!.storageKey;
+    expect(copyKey).not.toBe("asset-1");
+    expect(repository.assets.has(copyKey)).toBe(true);
+    expect(copy.pages[0]!.root.children[0]!.props.src).toBe(`asset:${copyKey}`);
+
+    // Deleting the original releases only its own blobs.
+    await deleteProject(repository, attached.id);
+    expect(repository.assets.has("asset-1")).toBe(false);
+    expect(repository.assets.has(copyKey)).toBe(true);
   });
 });

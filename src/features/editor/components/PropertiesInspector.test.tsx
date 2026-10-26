@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 // Provides IndexedDB in jsdom; must load before Dexie touches `indexedDB`.
 import "fake-indexeddb/auto";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -289,5 +289,125 @@ describe("Properties inspector (Phase 5)", () => {
     });
     const page = await waitForStored("inspector-url", "Url Demo");
     expect(page.root.children[0]!.props.src).toBe("https://example.com/cat.png");
+  });
+});
+
+describe("responsive style editing (Phase 8)", () => {
+  function headingWithBaseSize(): FrameNode {
+    const heading = makeTypedNode("node-heading", "Responsive heading", "heading");
+    heading.styles = { fontSize: 20 };
+    return heading;
+  }
+
+  function canvasHeading(): HTMLElement {
+    const element = document.querySelector('[data-component="heading"]');
+    if (element === null) throw new Error("heading not rendered");
+    return element as HTMLElement;
+  }
+
+  it("writes a mobile override, keeps desktop intact, and resets to inheritance", async () => {
+    const user = userEvent.setup();
+    const dbName = "inspector-responsive-mobile";
+    await openInspectorFor(dbName, "Responsive Mobile", [headingWithBaseSize()], "node-heading");
+
+    expect(canvasHeading()).toHaveStyle({ fontSize: "20px" });
+
+    act(() => useEditorStore.getState().setViewportPreset("mobile"));
+    expect(screen.getByTestId("document-viewport")).toHaveAttribute("data-breakpoint", "mobile");
+    expect(screen.getByTestId("breakpoint-banner")).toHaveTextContent("Editing Mobile styles");
+    // Nothing overridden yet: the field is inherited and the canvas still
+    // renders the base value.
+    expect(screen.getByTestId("node-heading-style-fontSize-breakpoint")).toHaveTextContent(
+      "Inherited",
+    );
+    expect(canvasHeading()).toHaveStyle({ fontSize: "20px" });
+
+    const amount = screen.getByTestId("node-heading-style-fontSize-amount");
+    await user.clear(amount);
+    await user.type(amount, "30");
+    await waitFor(() => expect(canvasHeading()).toHaveStyle({ fontSize: "30px" }));
+    expect(screen.getByTestId("node-heading-style-fontSize-breakpoint")).toHaveTextContent(
+      "Override",
+    );
+
+    const storedMobile = await waitForStored(dbName, "Responsive Mobile");
+    expect(storedMobile.root.children[0]!.styles.fontSize).toBe(20);
+    expect(storedMobile.root.children[0]!.responsive).toEqual({ mobile: { fontSize: 30 } });
+
+    // Desktop shows the base value again; the mobile override is untouched.
+    act(() => useEditorStore.getState().setViewportPreset("desktop"));
+    expect(canvasHeading()).toHaveStyle({ fontSize: "20px" });
+    expect(screen.queryByTestId("breakpoint-banner")).not.toBeInTheDocument();
+
+    act(() => useEditorStore.getState().setViewportPreset("mobile"));
+    expect(canvasHeading()).toHaveStyle({ fontSize: "30px" });
+
+    // Reset removes only the override; the field inherits again.
+    act(() => amount.blur());
+    await waitForStored(dbName, "Responsive Mobile");
+    await user.click(screen.getByTestId("node-heading-style-fontSize-reset"));
+    await waitFor(() =>
+      expect(screen.getByTestId("node-heading-style-fontSize-breakpoint")).toHaveTextContent(
+        "Inherited",
+      ),
+    );
+    expect(canvasHeading()).toHaveStyle({ fontSize: "20px" });
+    const cleared = await waitFor(
+      async () => {
+        const page = await loadStoredPage(dbName, "Responsive Mobile");
+        expect(page.root.children[0]!.responsive).toEqual({});
+        return page;
+      },
+      { timeout: 3000 },
+    );
+    expect(cleared.root.children[0]!.styles.fontSize).toBe(20);
+  });
+
+  it("keeps tablet and mobile overrides independent", async () => {
+    const user = userEvent.setup();
+    const dbName = "inspector-responsive-breakpoints";
+    await openInspectorFor(dbName, "Responsive Both", [headingWithBaseSize()], "node-heading");
+
+    // Mobile override first.
+    act(() => useEditorStore.getState().setViewportPreset("mobile"));
+    const amount = screen.getByTestId("node-heading-style-fontSize-amount");
+    await user.clear(amount);
+    await user.type(amount, "24");
+    await waitFor(() => expect(canvasHeading()).toHaveStyle({ fontSize: "24px" }));
+    act(() => amount.blur());
+    await waitForStored(dbName, "Responsive Both");
+
+    // Tablet has no override yet and falls back to base, not to mobile.
+    act(() => useEditorStore.getState().setViewportPreset("tablet"));
+    expect(canvasHeading()).toHaveStyle({ fontSize: "20px" });
+    expect(screen.getByTestId("node-heading-style-fontSize-breakpoint")).toHaveTextContent(
+      "Inherited",
+    );
+
+    const tabletAmount = screen.getByTestId("node-heading-style-fontSize-amount");
+    await user.clear(tabletAmount);
+    await user.type(tabletAmount, "28");
+    await waitFor(() => expect(canvasHeading()).toHaveStyle({ fontSize: "28px" }));
+    act(() => tabletAmount.blur());
+    const both = await waitFor(
+      async () => {
+        const page = await loadStoredPage(dbName, "Responsive Both");
+        expect(page.root.children[0]!.responsive).toEqual({
+          mobile: { fontSize: 24 },
+          tablet: { fontSize: 28 },
+        });
+        return page;
+      },
+      { timeout: 3000 },
+    );
+    expect(both.root.children[0]!.styles.fontSize).toBe(20);
+
+    // Switching back never overwrites either breakpoint.
+    act(() => useEditorStore.getState().setViewportPreset("mobile"));
+    expect(canvasHeading()).toHaveStyle({ fontSize: "24px" });
+    act(() => useEditorStore.getState().setViewportPreset("tablet"));
+    expect(canvasHeading()).toHaveStyle({ fontSize: "28px" });
+    act(() => useEditorStore.getState().setViewportPreset("desktop"));
+    expect(canvasHeading()).toHaveStyle({ fontSize: "20px" });
   });
 });

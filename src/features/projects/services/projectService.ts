@@ -3,10 +3,12 @@ import {
   createRootNode,
   parseFrameProject,
   slugify,
+  type FrameAsset,
   type FrameNode,
   type FrameProject,
   validateProjectName,
 } from "@/features/document/model";
+import { assetSrcFor, storageKeyFromSrc } from "@/features/assets/service";
 import type {
   CreateProjectInput,
   ProjectRepository,
@@ -153,14 +155,41 @@ export async function duplicateProject(
     return fresh;
   };
 
-  const cloneNode = (node: FrameNode): FrameNode => ({
-    ...node,
-    id: mapId(node.id),
-    props: structuredClone(node.props),
-    styles: structuredClone(node.styles),
-    children: node.children.map(cloneNode),
-    editor: { ...node.editor },
-  });
+  // Copy the image blobs under fresh storage keys so each project owns its
+  // assets: deleting one copy must never break the other's images (§19).
+  const assetKeyMap = new Map<string, string>();
+  const assets: FrameAsset[] = [];
+  for (const asset of source.assets) {
+    try {
+      const blob = await repository.getAssetBlob(asset.storageKey);
+      if (blob !== null) {
+        const newKey = `asset-${createId()}`;
+        await repository.putAsset({ storageKey: newKey, mimeType: asset.mimeType, blob });
+        assetKeyMap.set(asset.storageKey, newKey);
+        assets.push({ ...asset, id: createId(), storageKey: newKey });
+        continue;
+      }
+    } catch {
+      // Storage hiccup: keep the original record so the copy still renders.
+    }
+    assets.push(structuredClone(asset));
+  }
+
+  const cloneNode = (node: FrameNode): FrameNode => {
+    const props = structuredClone(node.props);
+    const sourceKey = storageKeyFromSrc(props.src);
+    const copiedKey = sourceKey === null ? undefined : assetKeyMap.get(sourceKey);
+    if (copiedKey !== undefined) props.src = assetSrcFor(copiedKey);
+    return {
+      ...node,
+      id: mapId(node.id),
+      props,
+      styles: structuredClone(node.styles),
+      ...(node.responsive === undefined ? {} : { responsive: structuredClone(node.responsive) }),
+      children: node.children.map(cloneNode),
+      editor: { ...node.editor },
+    };
+  };
 
   const timestamp = nowIso();
   const draft: FrameProject = {
@@ -176,7 +205,7 @@ export async function duplicateProject(
       root: cloneNode(page.root),
       settings: { ...page.settings },
     })),
-    assets: structuredClone(source.assets),
+    assets,
     designTokens: structuredClone(source.designTokens),
   };
 
@@ -185,7 +214,15 @@ export async function duplicateProject(
 }
 
 export async function deleteProject(repository: ProjectRepository, id: string): Promise<void> {
+  // Cleanup policy (spec §19): a deleted project releases the assets it
+  // owns. Blob cleanup is best-effort — the project record is already gone,
+  // so a failed blob delete only leaves an orphan, never broken user data.
+  const project = await repository.getProject(id);
   await repository.deleteProject(id);
+  for (const asset of project?.assets ?? []) {
+    if (typeof asset?.storageKey !== "string") continue;
+    await repository.deleteAsset(asset.storageKey).catch(() => undefined);
+  }
 }
 
 async function requireProject(repository: ProjectRepository, id: string): Promise<FrameProject> {
