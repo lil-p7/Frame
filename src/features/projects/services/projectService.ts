@@ -1,8 +1,6 @@
 import {
   PROJECT_SCHEMA_VERSION,
-  createRootNode,
   parseFrameProject,
-  slugify,
   type FrameAsset,
   type FrameNode,
   type FrameProject,
@@ -14,6 +12,7 @@ import type {
   ProjectRepository,
   ProjectSummary,
 } from "@/features/projects/types";
+import { starterPages } from "@/features/projects/services/starters";
 import { PersistenceError, ProjectValidationError } from "@/lib/errors";
 import { createId } from "@/lib/ids";
 
@@ -25,21 +24,6 @@ import { createId } from "@/lib/ids";
 function nowIso(): string {
   return new Date().toISOString();
 }
-
-function createInitialPage(projectName: string): StatePage {
-  return {
-    id: createId(),
-    name: projectName,
-    slug: slugify(projectName),
-    root: createRootNode(createId()),
-    settings: {
-      title: projectName,
-      backgroundColor: "#ffffff",
-    },
-  };
-}
-
-type StatePage = FrameProject["pages"][number];
 
 export async function createProject(
   repository: ProjectRepository,
@@ -59,7 +43,7 @@ export async function createProject(
     schemaVersion: PROJECT_SCHEMA_VERSION,
     createdAt: timestamp,
     updatedAt: timestamp,
-    pages: [createInitialPage(name)],
+    pages: starterPages(input.starter ?? "blank", name),
     assets: [],
     designTokens: { colors: {}, spacing: {}, typography: {} },
   };

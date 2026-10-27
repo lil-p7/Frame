@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AlertTriangle, ArrowLeft, Check, Loader2, Redo2, Undo2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { ExportDialog } from "@/features/export/components/ExportDialog";
+import { previewPath } from "@/features/preview/paths";
 import { FrameMark } from "@/features/dashboard/components/FrameMark";
 import { ViewportControls } from "@/features/editor/components/ViewportControls";
 import { PageMenu } from "@/features/editor/components/PageMenu";
@@ -38,8 +40,9 @@ const toolbarButton =
  * preview/export on the right.
  *
  * Undo/redo drive the page history engine (Phase 7) and disable honestly
- * when the page has nothing to undo or redo. Preview/export arrive in
- * Phase 10 and stay visibly disabled instead of pretending to work.
+ * when the page has nothing to undo or redo. Preview and export both flush
+ * pending edits to storage first, so neither can act on a stale document
+ * (spec §8).
  */
 export function EditorToolbar({
   project,
@@ -53,10 +56,13 @@ export function EditorToolbar({
   pageCommands,
 }: EditorToolbarProps) {
   const pages = project.pages;
+  const navigate = useNavigate();
   const currentPageId = useEditorStore((s) => s.currentPageId);
   const setCurrentPage = useEditorStore((s) => s.setCurrentPage);
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [exportOpen, setExportOpen] = useState(false);
+  const [openingPreview, setOpeningPreview] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(project.name);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -120,6 +126,18 @@ export function EditorToolbar({
   const StatusIcon = status.icon;
 
   const currentPage = pages.find((p) => p.id === currentPageId) ?? pages[0];
+
+  /**
+   * Preview opens the `/preview/:projectId/:pageId` route (spec §5C). Queued
+   * edits are flushed first so the preview shows the document the user is
+   * looking at, not the last saved revision (§8).
+   */
+  const openPreview = async (): Promise<void> => {
+    if (currentPage === undefined || openingPreview) return;
+    setOpeningPreview(true);
+    await pageCommands.flush();
+    void navigate(previewPath(project.id, currentPage.id));
+  };
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-950">
@@ -254,19 +272,37 @@ export function EditorToolbar({
         <ViewportControls onFitToWorkspace={onFitToWorkspace} />
       </div>
 
-      {/* Right: preview/export arrive in Phase 10 — shown disabled, not fake. */}
+      {/* Right: preview and export (spec §8, §22, §23). */}
       <div className="flex items-center gap-1">
-        <span title="Preview mode arrives in Phase 10 (preview and export)">
-          <button type="button" disabled className={toolbarButton} aria-disabled="true">
-            Preview
-          </button>
-        </span>
-        <span title="Export arrives in Phase 10 (preview and export)">
-          <button type="button" disabled className={toolbarButton} aria-disabled="true">
-            Export
-          </button>
-        </span>
+        <button
+          type="button"
+          data-testid="preview-button"
+          onClick={() => void openPreview()}
+          disabled={currentPage === undefined || openingPreview}
+          aria-disabled={currentPage === undefined || openingPreview}
+          title="Preview this page without editor controls"
+          className={toolbarButton}
+        >
+          Preview
+        </button>
+        <button
+          type="button"
+          data-testid="export-button"
+          onClick={() => setExportOpen(true)}
+          title="Export the project as a standalone website"
+          className={toolbarButton}
+        >
+          Export
+        </button>
       </div>
+
+      <ExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        project={project}
+        repository={repository}
+        flush={pageCommands.flush}
+      />
     </header>
   );
 }

@@ -5,7 +5,7 @@ import {
   getBreakpointStyles,
   resolveNodeStyles,
 } from "@/features/document/responsive";
-import { SUPPORTED_STYLE_KEYS } from "@/features/component-registry/styles";
+import { SUPPORTED_STYLE_KEYS, isSafeStyleValue } from "@/features/component-registry/styles";
 
 /**
  * Responsive CSS generation (spec §16 "Generate valid responsive CSS",
@@ -63,7 +63,11 @@ function declarationRecord(styles: Record<string, StyleValue>): Record<string, s
   // Object.entries order follows insertion; sort for deterministic output.
   for (const key of Object.keys(styles).sort()) {
     if (!SUPPORTED_KEYS.has(key)) continue;
-    const serialized = cssPropertyValue(key, styles[key] ?? null);
+    const value = styles[key] ?? null;
+    // The same safety rule the editor's inline styles obey (§17, §32): a
+    // value that could smuggle executable content never reaches CSS text.
+    if (!isSafeStyleValue(value)) continue;
+    const serialized = cssPropertyValue(key, value);
     if (serialized === null) continue;
     declarations[cssPropertyName(key)] = serialized;
   }

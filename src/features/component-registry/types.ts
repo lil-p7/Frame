@@ -16,11 +16,42 @@ export const COMPONENT_CATEGORIES: readonly ComponentCategory[] = [
 ] as const;
 
 /**
+ * Structured static element (spec §12 `renderExport`).
+ *
+ * The React-free description of a component's own element: preview renders it
+ * to React nodes and the exporter serializes it to JSX source, so both
+ * consume exactly one interpretation of the component (spec §22, §23).
+ * Styling is never part of this description — consumers apply the node's
+ * generated class from the shared page stylesheet.
+ */
+export interface StaticElement {
+  /** HTML tag name (`section`, `h1`, `a`, `img`, ...). */
+  tag: string;
+  /** Extra classes beyond the node's generated class (e.g. `frame-button`). */
+  className?: string;
+  /** Attributes with already-resolved values (href, src, alt, aria-*, ...). */
+  attrs?: Record<string, string>;
+  /** Leaf text content; null when the element wraps children instead. */
+  text?: string | null;
+  /** Self-closing element (`img`, `hr`): rendered with no children. */
+  voidElement?: boolean;
+}
+
+/**
+ * What a static renderer needs to turn stored data into deliverable markup.
+ * `mapHref` resolves a stored destination into a real href for the consumer
+ * (preview route or exported site); null means "not a link" (spec §20).
+ */
+export interface StaticRenderContext {
+  mapHref: (href: string) => string | null;
+}
+
+/**
  * Central component definition (spec §12).
  *
  * One definition drives validation, insertion (Phase 4), canvas rendering,
- * inspector configuration (Phase 5), and export (Phase 10). Definitions are
- * pure data + render functions; they never mutate nodes.
+ * inspector configuration (Phase 5), preview, and export (Phase 10).
+ * Definitions are pure data + render functions; they never mutate nodes.
  */
 export interface ComponentDefinition {
   /** Stable component type stored in `FrameNode.type`. */
@@ -60,6 +91,14 @@ export interface ComponentDefinition {
    * Editor overlays are added by the canvas, never by definitions.
    */
   renderEditor: (node: FrameNode, children: ReactNode) => ReactNode;
+
+  /**
+   * Preview/export rendering of this component's own element (spec §12
+   * "Separate: editor rendering, preview rendering, export rendering").
+   * Children are rendered by the tree builder in stored order, so this
+   * describes only the component's element and its own attributes.
+   */
+  renderStatic: (node: FrameNode, context: StaticRenderContext) => StaticElement;
 
   /** Editor metadata (spec §9B): which actions this component allows. */
   canDuplicate: boolean;

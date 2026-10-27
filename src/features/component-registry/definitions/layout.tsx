@@ -50,6 +50,7 @@ export const sectionComponent = defineComponent({
       children,
     );
   },
+  renderStatic: (node) => ({ tag: enumProp(node.props, "tag", SECTION_TAGS, "section") }),
 });
 
 /** Container: groups content with a configurable max width (spec §9B). */
@@ -81,6 +82,7 @@ export const containerComponent = defineComponent({
       {children}
     </div>
   ),
+  renderStatic: () => ({ tag: "div" }),
 });
 
 /** Stack: flex row/column arrangement (spec §9B). Direction lives in styles. */
@@ -107,6 +109,7 @@ export const stackComponent = defineComponent({
       {children}
     </div>
   ),
+  renderStatic: () => ({ tag: "div" }),
 });
 
 /** Grid: fixed-column grid layout (spec §9B). Columns live in styles. */
@@ -138,6 +141,7 @@ export const gridComponent = defineComponent({
       {children}
     </div>
   ),
+  renderStatic: () => ({ tag: "div" }),
 });
 
 /** Spacer: intentional spacing between siblings (spec §9B). */
@@ -159,4 +163,6 @@ export const spacerComponent = defineComponent({
       data-testid="spacer-node"
     />
   ),
+  // Spacing only: hidden from assistive technology in delivered markup too.
+  renderStatic: () => ({ tag: "div", attrs: { "aria-hidden": "true" } }),
 });

@@ -143,7 +143,6 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
   // node moves across both surfaces (spec §15). The document only changes in
   // `onDragEnd` with a valid resolved target — cancelled and invalid drags
   // are non-mutating by construction.
-  const drag = useEditorStore((s) => s.drag);
   const setDragStart = useEditorStore((s) => s.setDragStart);
   const setDragOver = useEditorStore((s) => s.setDragOver);
   const setDragEnd = useEditorStore((s) => s.setDragEnd);
@@ -432,15 +431,29 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
         </div>
 
         <DragOverlay dropAnimation={null}>
-          {drag.payload === null ? null : (
-            <DragOverlayCard payload={drag.payload} page={currentPage} />
-          )}
+          <DragOverlayContent page={currentPage} />
         </DragOverlay>
       </DndContext>
 
       <StatusBar page={currentPage} />
     </div>
   );
+}
+
+/**
+ * Drag preview host that owns its own subscription to the drag payload.
+ *
+ * `drag.over` changes on every pointer move during a drag; keeping that
+ * subscription out of `EditorShell` means the per-move updates re-render only
+ * this overlay and the surfaces drawing drop indicators — never the toolbar,
+ * sidebars, and status bar (spec §30: property changes and dragging must not
+ * cause unnecessary full-editor rerenders). The overlay itself renders once
+ * per drag because `payload` only changes on start/end.
+ */
+function DragOverlayContent({ page }: { page: FramePage }) {
+  const payload = useEditorStore((s) => s.drag.payload);
+  if (payload === null) return null;
+  return <DragOverlayCard payload={payload} page={page} />;
 }
 
 /** Temporary drag preview (spec §15): never rendered into the document. */

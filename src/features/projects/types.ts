@@ -14,9 +14,14 @@ export interface ProjectSummary {
   corrupt: boolean;
 }
 
+/** Starter templates offered by the create-project dialog (spec §6). */
+export type StarterId = "blank" | "landing" | "portfolio";
+
 export interface CreateProjectInput {
   name: string;
   description?: string;
+  /** Defaults to "blank". */
+  starter?: StarterId;
 }
 
 /**

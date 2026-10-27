@@ -4,6 +4,7 @@
 import { Link, RouteObject, createBrowserRouter } from "react-router-dom";
 import DashboardPage from "@/features/dashboard/DashboardPage";
 import EditorRoute from "@/features/editor/EditorRoute";
+import PreviewRoute from "@/features/preview/PreviewRoute";
 function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-zinc-50 dark:bg-zinc-900">
@@ -18,6 +19,7 @@ function NotFound() {
 export const routes: RouteObject[] = [
   { path: "/", element: <DashboardPage /> },
   { path: "/editor/:projectId", element: <EditorRoute /> },
+  { path: "/preview/:projectId/:pageId", element: <PreviewRoute /> },
   { path: "*", element: <NotFound /> },
 ];
 

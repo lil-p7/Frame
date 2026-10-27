@@ -16,7 +16,7 @@ import {
   duplicateProject,
   renameProject,
 } from "@/features/projects/services/projectService";
-import type { ProjectSummary } from "@/features/projects/types";
+import type { ProjectSummary, StarterId } from "@/features/projects/types";
 import { PersistenceError, ProjectValidationError } from "@/lib/errors";
 
 type SortMode = "recent" | "alphabetical";
@@ -51,9 +51,13 @@ export default function DashboardPage() {
     return sorted;
   }, [summaries, query, sortMode]);
 
-  const handleCreate = async (name: string, description?: string): Promise<void> => {
+  const handleCreate = async (
+    name: string,
+    description?: string,
+    starter?: StarterId,
+  ): Promise<void> => {
     try {
-      const project = await createProject(repository, { name, description });
+      const project = await createProject(repository, { name, description, starter });
       toast.success(`Project "${project.name}" created`);
       void navigate(`/editor/${project.id}`);
       await reload();
@@ -175,7 +179,9 @@ export default function DashboardPage() {
       <CreateProjectDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreate={(name, description) => void handleCreate(name, description)}
+        onCreate={(name, description, starter) =>
+          void handleCreate(name, description, starter)
+        }
       />
       <RenameProjectDialog
         project={renaming}

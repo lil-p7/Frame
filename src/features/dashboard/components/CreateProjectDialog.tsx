@@ -1,21 +1,23 @@
 import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { validateProjectName } from "@/features/document/model";
+import type { StarterId } from "@/features/projects/types";
+import { STARTERS } from "@/features/projects/services/starters";
 
 interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (name: string, description?: string) => void;
+  onCreate: (name: string, description: string | undefined, starter: StarterId) => void;
 }
 
 /**
- * Create-project dialog. Only the "Blank project" starter is offered because
- * the other starter templates (§6) are not implemented yet; offering them
- * would be presenting nonfunctional controls.
+ * Create-project dialog (spec §6). Every listed starter is implemented by
+ * `starterPages`, so no option is a nonfunctional control.
  */
 export function CreateProjectDialog({ open, onOpenChange, onCreate }: CreateProjectDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [starter, setStarter] = useState<StarterId>("blank");
   const [error, setError] = useState<string | null>(null);
 
   // Reset the form whenever the dialog is opened fresh.
@@ -23,6 +25,7 @@ export function CreateProjectDialog({ open, onOpenChange, onCreate }: CreateProj
     if (open) {
       setName("");
       setDescription("");
+      setStarter("blank");
       setError(null);
     }
   }, [open]);
@@ -34,7 +37,7 @@ export function CreateProjectDialog({ open, onOpenChange, onCreate }: CreateProj
       return;
     }
     onOpenChange(false);
-    onCreate(name, description.trim() === "" ? undefined : description);
+    onCreate(name, description.trim() === "" ? undefined : description, starter);
   };
 
   return (
@@ -91,14 +94,28 @@ export function CreateProjectDialog({ open, onOpenChange, onCreate }: CreateProj
               />
             </label>
 
-            <fieldset className="flex flex-col gap-1.5">
+            <fieldset className="flex flex-col gap-2">
               <legend className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                 Starter
               </legend>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="radio" name="starter" value="blank" defaultChecked />
-                Blank project
-              </label>
+              {STARTERS.map((option) => (
+                <label key={option.id} className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="starter"
+                    value={option.id}
+                    checked={starter === option.id}
+                    onChange={() => setStarter(option.id)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium">{option.label}</span>{" "}
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      {option.description}
+                    </span>
+                  </span>
+                </label>
+              ))}
             </fieldset>
 
             <div className="mt-1 flex justify-end gap-2">

@@ -516,6 +516,9 @@ function TextInput({
 
   const commonProps = {
     "data-testid": `${testKey}-input`,
+    // Matches the row's `<label htmlFor>` so the field label actually names
+    // this control for assistive technology (spec §29).
+    id: `${testKey}-input`,
     value: draft,
     onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setDraft(event.target.value),
@@ -558,6 +561,7 @@ function OpacityInput({
       <input
         type="range"
         data-testid={`${testKey}-range`}
+        id={`${testKey}-input`}
         className="h-1 flex-1 accent-zinc-700"
         min={0}
         max={1}
@@ -592,6 +596,7 @@ function SelectInput({
   return (
     <select
       data-testid={`${testKey}-select`}
+      id={`${testKey}-input`}
       className={inputClass}
       value={raw}
       onChange={(event) =>
@@ -657,6 +662,7 @@ function ColorInput({
       <input
         type="text"
         data-testid={`${testKey}-hex`}
+        id={`${testKey}-input`}
         className={HEX_INPUT_CLASS}
         value={draft}
         placeholder="#000000"
@@ -720,6 +726,7 @@ function UnitInput({
       <input
         type="text"
         data-testid={`${testKey}-amount`}
+        id={`${testKey}-input`}
         inputMode="decimal"
         className={cn(inputClass, "tabular-nums")}
         value={amount}

@@ -1,7 +1,7 @@
 import type { FrameNode, ResponsiveStyles, StyleValue } from "@/features/document/model";
 import { createId } from "@/lib/ids";
 import type { InspectorField } from "@/features/component-registry/inspector";
-import type { ComponentDefinition } from "@/features/component-registry/types";
+import type { ComponentDefinition, StaticElement, StaticRenderContext } from "@/features/component-registry/types";
 
 /**
  * Registration helper: assembles a `ComponentDefinition` from declarative
@@ -25,6 +25,12 @@ export interface ComponentSpec {
   /** Defaults for composite presets (Navbar/Hero/Footer). */
   defaultChildren?: () => FrameNode[];
   renderEditor: ComponentDefinition["renderEditor"];
+  /**
+   * Static element for preview and export. Required: every component must
+   * declare its deliverable markup explicitly rather than falling back to a
+   * guessed tag (spec §12, §23).
+   */
+  renderStatic: (node: FrameNode, context: StaticRenderContext) => StaticElement;
   /** Inspector field declarations; rendered section-by-section by the inspector. */
   controls?: readonly InspectorField[];
   canDuplicate?: boolean;
@@ -54,6 +60,7 @@ export function defineComponent(spec: ComponentSpec): ComponentDefinition {
     // Closure over `definition` is only invoked after initialization.
     createDefaultNode: () => buildNode(definition),
     renderEditor: spec.renderEditor,
+    renderStatic: spec.renderStatic,
     controls: spec.controls ?? [],
     canDuplicate: spec.canDuplicate ?? true,
     canDelete: spec.canDelete ?? true,

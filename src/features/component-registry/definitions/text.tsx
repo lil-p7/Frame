@@ -55,6 +55,10 @@ export const headingComponent = defineComponent({
       text,
     );
   },
+  renderStatic: (node) => ({
+    tag: `h${Math.min(6, Math.max(1, Math.round(numberProp(node.props, "level", 2))))}`,
+    text: stringProp(node.props, "text", ""),
+  }),
 });
 
 /** Paragraph: editable running text (spec §9B). */
@@ -83,6 +87,7 @@ export const paragraphComponent = defineComponent({
       {stringProp(node.props, "text", "")}
     </p>
   ),
+  renderStatic: (node) => ({ tag: "p", text: stringProp(node.props, "text", "") }),
 });
 
 /** Text: general inline text element (spec §9B). */
@@ -110,4 +115,5 @@ export const textComponent = defineComponent({
       {stringProp(node.props, "text", "")}
     </span>
   ),
+  renderStatic: (node) => ({ tag: "span", text: stringProp(node.props, "text", "") }),
 });

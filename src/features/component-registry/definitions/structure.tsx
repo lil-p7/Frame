@@ -52,6 +52,12 @@ export const dividerComponent = defineComponent({
     };
     return <hr style={style} data-component="divider" data-testid="divider-node" />;
   },
+  /**
+   * The divider draws only its top edge (defined renderer behavior, §17).
+   * The `frame-divider` base class suppresses the other sides so the
+   * delivered markup matches the canvas.
+   */
+  renderStatic: () => ({ tag: "hr", className: "frame-divider", voidElement: true }),
 });
 
 const BORDER_STYLES = [
@@ -144,6 +150,7 @@ export const navbarComponent = defineComponent({
       {children}
     </nav>
   ),
+  renderStatic: () => ({ tag: "nav" }),
 });
 
 /** Hero preset: decomposable headline + copy + call to action (spec §9B). */
@@ -190,6 +197,7 @@ export const heroComponent = defineComponent({
       {children}
     </section>
   ),
+  renderStatic: () => ({ tag: "section" }),
 });
 
 /** Footer preset: decomposable footer with text and links (spec §9B). */
@@ -232,4 +240,5 @@ export const footerComponent = defineComponent({
       {children}
     </footer>
   ),
+  renderStatic: () => ({ tag: "footer" }),
 });

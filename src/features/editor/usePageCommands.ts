@@ -148,6 +148,11 @@ export interface PageCommands {
   movePage: (direction: "up" | "down") => Promise<boolean>;
   /** Updates name/slug/title/background of the current page (validated). */
   updatePageSettings: (updates: PageSettingsUpdates) => Promise<void>;
+  /**
+   * Resolves once every queued command has been applied and persisted
+   * (spec §8: flush pending changes before navigating away or exporting).
+   */
+  flush: () => Promise<void>;
 }
 
 export function usePageCommands({
@@ -324,6 +329,13 @@ export function usePageCommands({
     },
     [repository, onProjectChanged],
   );
+
+  /**
+   * Waits for the command queue to drain. Commands are appended in order, so
+   * the returned promise settles only after every earlier task (including its
+   * save) has settled — nothing is written out of order (spec §31).
+   */
+  const flush = useCallback((): Promise<void> => enqueue(() => Promise.resolve()), [enqueue]);
 
   const insertComponent = useCallback(
     (type: string): void => {
@@ -723,6 +735,7 @@ export function usePageCommands({
     deletePage,
     movePage,
     updatePageSettings: updateCurrentPageSettings,
+    flush,
   };
 }
 

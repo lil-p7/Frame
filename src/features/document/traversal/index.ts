@@ -11,6 +11,17 @@ export function walkNodes(root: FrameNode, visit: (node: FrameNode) => void): vo
   for (const child of root.children) walkNodes(child, visit);
 }
 
+/**
+ * Pre-order walk that skips hidden subtrees (spec §9C): hidden components are
+ * not rendered in the canvas, preview, or export, so style generation and
+ * static rendering share this one rule.
+ */
+export function walkVisibleNodes(root: FrameNode, visit: (node: FrameNode) => void): void {
+  if (root.editor.hidden) return;
+  visit(root);
+  for (const child of root.children) walkVisibleNodes(child, visit);
+}
+
 /** Finds a node by ID, or null when it is not in this tree. */
 export function findNode(root: FrameNode, id: string): FrameNode | null {
   if (root.id === id) return root;

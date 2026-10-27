@@ -62,6 +62,30 @@ describe("DashboardPage (integration over IndexedDB)", () => {
     expect(within(cards[0]!).getByText(/1 page/)).toBeInTheDocument();
   });
 
+  it("creates a project from the landing starter with real content on the canvas", async () => {
+    const user = userEvent.setup();
+    const view = renderApp("db-starter-landing");
+
+    expect(await view.utils.findByText("No projects yet")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /create your first project/i }));
+    await user.type(screen.getByPlaceholderText("Portfolio Website"), "Landing Demo");
+    // Every listed starter is implemented (§6), so each is a real choice.
+    await user.click(screen.getByRole("radio", { name: /landing page/i }));
+    await user.click(screen.getByRole("button", { name: /create project/i }));
+
+    // The editor opens on the new project and renders the starter content.
+    expect(await screen.findByRole("button", { name: "Landing Demo" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        document.querySelector('[data-testid="canvas-node"][data-node-type="hero"]'),
+      ).not.toBeNull();
+    });
+    expect(
+      document.querySelector('[data-testid="canvas-node"][data-node-type="footer"]'),
+    ).not.toBeNull();
+  });
+
   it("restores projects from storage on a fresh render (simulated restart)", async () => {
     const dbName = "db-restart";
     const seeded = await seedAndRender(dbName, ["Persisted Project"]);

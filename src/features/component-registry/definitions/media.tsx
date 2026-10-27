@@ -5,6 +5,7 @@ import { field } from "@/features/component-registry/inspector";
 import { defineComponent } from "@/features/component-registry/define";
 import { stylesToCss } from "@/features/component-registry/styles";
 import { stringProp } from "@/features/component-registry/props";
+import type { StaticElement } from "@/features/component-registry/types";
 import { ASSET_SRC_PREFIX, storageKeyFromSrc } from "@/features/assets/service";
 
 /**
@@ -12,7 +13,7 @@ import { ASSET_SRC_PREFIX, storageKeyFromSrc } from "@/features/assets/service";
  * stored assets are accepted as image sources — never `javascript:` or other
  * active schemes.
  */
-function isSafeImageSource(value: string): boolean {
+export function isSafeImageSource(value: string): boolean {
   if (value.trim() === "") return true; // empty = "no source set" yet
   if (value.startsWith(ASSET_SRC_PREFIX)) return true; // uploaded asset reference
   if (value.startsWith("/") || value.startsWith("./") || value.startsWith("#")) return true;
@@ -86,7 +87,40 @@ export const imageComponent = defineComponent({
     }
     return <img src={src} alt={alt} style={css} data-component="image" data-testid="image-node" />;
   },
+  /**
+   * Delivered markup keeps the same two recoverable states as the canvas
+   * (spec §19, §28): by the time a static renderer runs, every *available*
+   * asset reference has been rewritten to a real URL by the consumer, so a
+   * surviving `asset:` reference means the bytes are gone.
+   */
+  renderStatic: (node) => {
+    const src = stringProp(node.props, "src", "");
+    const alt = stringProp(node.props, "alt", "");
+    if (storageKeyFromSrc(src) !== null) return missingImageElement(alt);
+    if (src.trim() === "" || !isSafeImageSource(src)) return placeholderImageElement(alt);
+    return { tag: "img", attrs: { src, alt }, voidElement: true };
+  },
 });
+
+/** Missing stored asset (the reference is kept in the document). */
+function missingImageElement(alt: string): StaticElement {
+  return {
+    tag: "div",
+    className: "frame-placeholder",
+    attrs: { "data-frame-placeholder": "image", "aria-label": alt || "Missing image asset" },
+    text: "Linked image asset is missing",
+  };
+}
+
+/** No source set yet — the same neutral placeholder the editor shows. */
+function placeholderImageElement(alt: string): StaticElement {
+  return {
+    tag: "div",
+    className: "frame-placeholder",
+    attrs: { "data-frame-placeholder": "image", "aria-label": alt || "Image with no source set" },
+    text: "Image — no source set",
+  };
+}
 
 /** Shared visual treatment for the two controlled missing-image states. */
 function missingAssetStyle(css: ReturnType<typeof stylesToCss>): CSSProperties {

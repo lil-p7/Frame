@@ -67,6 +67,18 @@ export const buttonComponent = defineComponent({
       {stringProp(node.props, "label", "Button")}
     </button>
   ),
+  /**
+   * Delivered as a real link so the button performs its configured action in
+   * preview and in the exported site (spec §22, §23). Without a destination
+   * it stays a plain (non-interactive) element rather than a dead link.
+   */
+  renderStatic: (node, context) => {
+    const label = stringProp(node.props, "label", "Button");
+    const href = context.mapHref(stringProp(node.props, "href", ""));
+    return href === null
+      ? { tag: "span", className: "frame-button", text: label }
+      : { tag: "a", className: "frame-button", attrs: { href }, text: label };
+  },
 });
 
 /** Link: editable label + destination with optional new-tab behavior (spec §9B). */
@@ -107,5 +119,15 @@ export const linkComponent = defineComponent({
         {stringProp(node.props, "label", "Link")}
       </a>
     );
+  },
+  renderStatic: (node, context) => {
+    const label = stringProp(node.props, "label", "Link");
+    const href = context.mapHref(stringProp(node.props, "href", ""));
+    if (href === null) return { tag: "span", text: label };
+    const newTab = booleanProp(node.props, "newTab", false);
+    const attrs: Record<string, string> = newTab
+      ? { href, target: "_blank", rel: "noreferrer" }
+      : { href };
+    return { tag: "a", attrs, text: label };
   },
 });
