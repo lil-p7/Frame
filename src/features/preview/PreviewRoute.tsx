@@ -51,11 +51,11 @@ export default function PreviewRoute() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-900">
+    <div className="flex min-h-screen flex-col bg-zinc-950">
       <PreviewShellHeader />
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
         {state.status === "loading" && (
-          <p role="status" className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p role="status" className="text-sm text-zinc-500">
             Loading preview…
           </p>
         )}
@@ -116,7 +116,7 @@ function PreviewView({
   if (page === null) {
     const firstPage = project.pages[0];
     return (
-      <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-900">
+      <div className="flex min-h-screen flex-col bg-zinc-950">
         <PreviewShellHeader projectId={project.id} />
         <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
           <Notice
@@ -131,7 +131,7 @@ function PreviewView({
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-950">
+    <div className="flex h-dvh flex-col overflow-hidden bg-zinc-950">
       <PreviewToolbar
         project={project}
         page={page}
@@ -141,13 +141,13 @@ function PreviewView({
       />
       <main
         data-testid="preview-canvas"
-        className="relative flex h-full min-w-0 flex-1 items-start justify-center overflow-auto bg-zinc-200 p-6 dark:bg-zinc-900"
+        className="relative flex h-full min-w-0 flex-1 items-start justify-center overflow-auto bg-zinc-900 p-6"
       >
         <div
           data-testid="preview-viewport"
           data-width={viewportWidth}
           style={{ width: `${viewportWidth}px` }}
-          className="min-h-full shrink-0 shadow-lg ring-1 ring-zinc-300/80 dark:ring-zinc-700"
+          className="min-h-full shrink-0 shadow-lg ring-1 ring-zinc-700"
         >
           <StaticPageView
             page={page}
@@ -168,10 +168,10 @@ function PreviewView({
 /** Back-to-editor header for the non-ready preview states. */
 function PreviewShellHeader({ projectId }: { projectId?: string }) {
   return (
-    <header className="flex h-12 shrink-0 items-center border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-950">
+    <header className="flex h-12 shrink-0 items-center border-b border-line bg-zinc-950 px-3">
       <Link
         to={projectId === undefined ? "/" : editorPath(projectId)}
-        className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
       >
         {projectId === undefined ? "← Back to projects" : "← Back to editor"}
       </Link>
@@ -196,15 +196,13 @@ function Notice({
     <div
       className={
         tone === "error"
-          ? "rounded-lg border border-red-300 bg-red-50 px-6 py-10 text-center dark:border-red-900 dark:bg-red-950/40"
-          : "rounded-lg border border-zinc-200 bg-white px-6 py-10 text-center dark:border-zinc-800 dark:bg-zinc-900"
+          ? "rounded-lg border border-red-900 bg-red-950/40 px-6 py-10 text-center"
+          : "rounded-lg border border-line bg-zinc-900 px-6 py-10 text-center"
       }
     >
       <h1
         className={
-          tone === "error"
-            ? "text-lg font-semibold text-red-800 dark:text-red-300"
-            : "text-lg font-semibold"
+          tone === "error" ? "text-lg font-semibold text-red-300" : "display text-xl text-zinc-100"
         }
       >
         {title}
@@ -212,15 +210,15 @@ function Notice({
       <p
         className={
           tone === "error"
-            ? "mt-2 text-sm text-red-700/80 dark:text-red-300/80"
-            : "mt-2 text-sm text-zinc-500 dark:text-zinc-400"
+            ? "mt-2 text-sm text-red-300/80"
+            : "mt-2 text-sm text-zinc-400"
         }
       >
         {body}
       </p>
       <Link
         to={to}
-        className="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        className="mt-4 inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-white"
       >
         {action}
       </Link>

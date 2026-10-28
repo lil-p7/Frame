@@ -13,10 +13,10 @@ interface ProjectCardProps {
 }
 
 const menuItemClass =
-  "flex w-full cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-zinc-100 dark:data-[highlighted]:bg-zinc-800";
+  "flex w-full cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-300 outline-none data-[highlighted]:bg-white/10";
 const destructiveItemClass = cn(
   menuItemClass,
-  "text-red-600 data-[highlighted]:bg-red-50 dark:text-red-400 dark:data-[highlighted]:bg-red-950/50",
+  "text-red-400 data-[highlighted]:bg-red-950/60",
 );
 
 export function ProjectCard({ project, onRename, onDuplicate, onDelete }: ProjectCardProps) {
@@ -25,10 +25,10 @@ export function ProjectCard({ project, onRename, onDuplicate, onDelete }: Projec
   return (
     <article
       className={cn(
-        "group overflow-hidden rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-zinc-900",
+        "group overflow-hidden rounded-lg border bg-zinc-900 transition-colors hover:border-zinc-700",
         project.corrupt
-          ? "border-red-300 dark:border-red-900"
-          : "border-zinc-200 dark:border-zinc-800",
+          ? "border-red-900"
+          : "border-line",
       )}
       data-testid="project-card"
     >
@@ -52,14 +52,14 @@ export function ProjectCard({ project, onRename, onDuplicate, onDelete }: Projec
             onClick={(event) => {
               if (project.corrupt) event.preventDefault();
             }}
-            className="block truncate text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400"
+            className="block truncate text-[13px] font-medium text-zinc-100 hover:text-accent"
             draggable={false}
           >
             {project.name}
           </Link>
-          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="mt-0.5 text-[11px] text-zinc-400">
             {project.corrupt ? (
-              <span className="text-red-600 dark:text-red-400">
+              <span className="text-red-400">
                 This project’s data is damaged and cannot be opened.
               </span>
             ) : (
@@ -76,7 +76,7 @@ export function ProjectCard({ project, onRename, onDuplicate, onDelete }: Projec
           <DropdownMenu.Trigger
             asChild
             aria-label={`Open menu for ${project.name}`}
-            className="rounded-md p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline-2 focus-visible:outline-blue-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+            className="rounded p-1 text-zinc-500 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-accent"
           >
             <button type="button">
               <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
@@ -86,7 +86,7 @@ export function ProjectCard({ project, onRename, onDuplicate, onDelete }: Projec
             <DropdownMenu.Content
               align="end"
               sideOffset={4}
-              className="z-50 min-w-[160px] rounded-lg border border-zinc-200 bg-white p-1 shadow-md focus:outline-none dark:border-zinc-800 dark:bg-zinc-900"
+              className="z-50 min-w-[160px] rounded-lg border border-line bg-zinc-800 p-1 shadow-xl focus:outline-none"
             >
               {!project.corrupt && (
                 <>
@@ -101,7 +101,7 @@ export function ProjectCard({ project, onRename, onDuplicate, onDelete }: Projec
                     <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                     Duplicate
                   </DropdownMenu.Item>
-                  <DropdownMenu.Separator className="my-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+                  <DropdownMenu.Separator className="my-1 h-px bg-white/10" />
                 </>
               )}
               <DropdownMenu.Item
@@ -126,19 +126,19 @@ export function ProjectCard({ project, onRename, onDuplicate, onDelete }: Projec
 function ProjectTile() {
   return (
     <div
-      className="flex h-28 items-center justify-center bg-zinc-100 transition-colors group-hover:bg-zinc-200/70 dark:bg-zinc-800 dark:group-hover:bg-zinc-700/60"
+      className="flex h-28 items-center justify-center bg-zinc-800/60 shadow-[inset_0_1px_0_rgba(244,244,240,0.04)] transition-colors group-hover:bg-zinc-800"
       aria-hidden="true"
     >
       <div className="flex w-2/3 flex-col gap-1.5 opacity-60">
-        <div className="h-2 w-1/2 rounded-full bg-zinc-400 dark:bg-zinc-600" />
-        <div className="h-2 w-3/4 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+        <div className="h-2 w-1/2 rounded-full bg-zinc-500" />
+        <div className="h-2 w-3/4 rounded-full bg-zinc-600" />
         <div className="mt-2 flex gap-1.5">
-          <div className="h-7 flex-1 rounded-sm bg-zinc-300 dark:bg-zinc-700" />
-          <div className="h-7 flex-1 rounded-sm bg-zinc-400/70 dark:bg-zinc-600/70" />
+          <div className="h-7 flex-1 rounded-sm bg-zinc-700" />
+          <div className="h-7 flex-1 rounded-sm bg-zinc-700/60" />
         </div>
         <div className="flex items-center gap-1 pt-0.5">
-          <FolderOpen className="h-3 w-3 text-zinc-400 dark:text-zinc-600" />
-          <div className="h-1.5 w-1/3 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+          <FolderOpen className="h-3 w-3 text-zinc-500" />
+          <div className="h-1.5 w-1/3 rounded-full bg-zinc-600" />
         </div>
       </div>
     </div>

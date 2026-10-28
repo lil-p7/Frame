@@ -17,7 +17,18 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <RepositoryContext.Provider value={repositoryRef.current}>
       {children}
-      <Toaster position="bottom-right" richColors closeButton />
+      <Toaster
+        position="bottom-right"
+        theme="dark"
+        toastOptions={{
+          style: {
+            background: "#171717",
+            border: "1px solid #292929",
+            color: "#f4f4f0",
+          },
+        }}
+        closeButton
+      />
     </RepositoryContext.Provider>
   );
 }

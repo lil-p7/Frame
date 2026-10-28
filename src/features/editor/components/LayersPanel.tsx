@@ -131,7 +131,7 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
   }
 
   const actionButton =
-    "inline-flex h-4.5 w-4.5 items-center justify-center rounded text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:hover:bg-zinc-700 dark:hover:text-zinc-200";
+    "inline-flex h-4.5 w-4.5 items-center justify-center rounded text-zinc-400 hover:bg-white/10 hover:text-zinc-200 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
 
   return (
     <div role="none">
@@ -170,11 +170,11 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
         }}
         style={{ paddingLeft: `${8 + depth * 12}px` }}
         className={cn(
-          "group relative flex h-7 cursor-pointer items-center gap-1 pr-2 text-xs focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600",
+          "group relative flex h-7 cursor-pointer items-center gap-1 pr-2 text-xs focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent",
           selected
-            ? "bg-blue-600/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
-            : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800/60",
-          isRoot && "cursor-default text-zinc-400 dark:text-zinc-500",
+            ? "bg-white/10 text-accent"
+            : "text-zinc-300 hover:bg-white/5",
+          isRoot && "cursor-default text-zinc-500",
           hidden && "opacity-50",
           isDragging && "opacity-50",
         )}
@@ -194,7 +194,7 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
             title={locked ? "Unlock before reordering" : "Drag to reorder"}
             {...listeners}
             {...attributes}
-            className="inline-flex h-4 w-4 shrink-0 cursor-grab touch-none items-center justify-center rounded text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-zinc-200 hover:text-zinc-700 active:cursor-grabbing disabled:cursor-not-allowed dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+            className="inline-flex h-4 w-4 shrink-0 cursor-grab touch-none items-center justify-center rounded text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-white/10 hover:text-zinc-200 active:cursor-grabbing disabled:cursor-not-allowed"
           >
             <GripVertical className="h-3 w-3" aria-hidden="true" />
           </button>
@@ -207,7 +207,7 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
               setExpanded((value) => !value);
             }}
             aria-label={expanded ? `Collapse ${node.name}` : `Expand ${node.name}`}
-            className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
+            className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded hover:bg-white/10"
           >
             {expanded ? (
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
@@ -223,7 +223,7 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
           const Icon = definition?.icon;
           return Icon !== undefined && !isRoot ? (
             <Icon
-              className="h-3 w-3 shrink-0 text-zinc-400 dark:text-zinc-500"
+              className="h-3 w-3 shrink-0 text-zinc-500"
               aria-hidden="true"
             />
           ) : (
@@ -235,7 +235,7 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
           {node.name}
         </span>
         {!isRoot && (
-          <span className="truncate text-[10px] text-zinc-400 dark:text-zinc-500">{node.type}</span>
+          <span className="truncate text-[10px] text-zinc-500">{node.type}</span>
         )}
 
         {!isRoot && (
@@ -335,11 +335,11 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
             data-testid={`layer-drop-${dropBand}`}
             aria-hidden="true"
             className={cn(
-              "pointer-events-none absolute left-0 right-0 z-10 rounded bg-blue-500",
+              "pointer-events-none absolute left-0 right-0 z-10 rounded bg-accent/80",
               dropBand === "before" && "-top-0.5 h-0.5",
               dropBand === "after" && "-bottom-0.5 h-0.5",
               dropBand === "inside" &&
-                "inset-0 h-auto rounded-sm bg-blue-500/10 ring-1 ring-blue-500/60",
+                "inset-0 h-auto rounded-sm bg-accent/10 ring-1 ring-accent/60",
             )}
           />
         )}
@@ -400,7 +400,7 @@ function LayerNameEditor({ node, onCommit, onCancel }: LayerNameEditorProps) {
         }
       }}
       onBlur={commit}
-      className="h-5 w-28 rounded border border-blue-500 bg-white px-1 text-xs focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-blue-600 dark:bg-zinc-900"
+      className="h-5 w-28 rounded border border-accent bg-zinc-900 px-1 text-xs text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent"
     />
   );
 }

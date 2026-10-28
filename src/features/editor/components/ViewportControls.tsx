@@ -54,11 +54,11 @@ export function ViewportControls({ onFitToWorkspace }: ViewportControlsProps) {
   const shownWidth = widthDraft ?? String(Math.round(resolvedWidth));
 
   const iconButton =
-    "inline-flex h-7 w-7 items-center justify-center rounded text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+    "inline-flex h-7 w-7 items-center justify-center rounded text-zinc-400 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40";
 
   return (
     <div className="flex items-center gap-1" role="group" aria-label="Viewport and zoom">
-      <div className="flex items-center gap-0.5 rounded-md border border-zinc-200 p-0.5 dark:border-zinc-700">
+      <div className="flex items-center gap-0.5 rounded border border-line p-0.5">
         {VIEWPORT_PRESETS.map((preset) => {
           const Icon = PRESET_ICONS[preset.id];
           const active = viewportSelection === preset.id;
@@ -75,7 +75,7 @@ export function ViewportControls({ onFitToWorkspace }: ViewportControlsProps) {
               className={cn(
                 iconButton,
                 active &&
-                  "bg-blue-600/10 text-blue-700 hover:bg-blue-600/15 hover:text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/25 dark:hover:text-blue-200",
+                  "bg-white/10 text-accent hover:bg-white/15 hover:text-accent",
               )}
             >
               <Icon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -85,7 +85,7 @@ export function ViewportControls({ onFitToWorkspace }: ViewportControlsProps) {
         })}
       </div>
 
-      <label className="ml-1 flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+      <label className="ml-1 flex items-center gap-1 text-xs text-zinc-500">
         <span className="sr-only">Custom viewport width in pixels</span>
         <input
           type="number"
@@ -101,13 +101,13 @@ export function ViewportControls({ onFitToWorkspace }: ViewportControlsProps) {
             }
           }}
           onBlur={() => setWidthDraft(null)}
-          className="h-7 w-16 rounded border border-zinc-200 bg-white px-1.5 text-center text-xs tabular-nums text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+          className="h-7 w-16 rounded border border-line bg-zinc-900 px-1.5 text-center text-xs tabular-nums text-zinc-200 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
         />
         <span aria-hidden="true">px</span>
       </label>
 
       <span
-        className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700"
+        className="mx-1 h-5 w-px bg-zinc-700"
         role="separator"
         aria-orientation="vertical"
       />
@@ -128,7 +128,7 @@ export function ViewportControls({ onFitToWorkspace }: ViewportControlsProps) {
           onClick={resetZoom}
           aria-label="Reset zoom to 100%"
           title="Reset zoom to 100%"
-          className="h-7 min-w-11 rounded px-1 text-xs tabular-nums text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          className="h-7 min-w-11 rounded px-1 text-xs tabular-nums text-zinc-400 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
         >
           {Math.round(zoom * 100)}%
         </button>

@@ -22,10 +22,10 @@ import { PersistenceError, ProjectValidationError } from "@/lib/errors";
 type SortMode = "recent" | "alphabetical";
 
 const sortButtonClass = (selected: boolean): string =>
-  `rounded-md px-2 py-1 text-xs ${
+  `rounded px-2.5 py-1 text-xs ${
     selected
-      ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+      ? "bg-white/10 text-zinc-100"
+      : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
   }`;
 
 export default function DashboardPage() {
@@ -97,12 +97,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
+    <div className="min-h-screen bg-zinc-950">
       <DashboardHeader onNewProject={() => setCreateOpen(true)} />
 
       <main className="mx-auto max-w-5xl px-6 py-8">
-        <h1 className="text-xl font-semibold tracking-tight">Your projects</h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        <h1 className="display text-[26px] leading-tight text-zinc-100">Your projects</h1>
+        <p className="mt-1.5 max-w-md text-sm text-zinc-400">
           Build responsive web pages by assembling components on a canvas.
         </p>
 
@@ -120,12 +120,12 @@ export default function DashboardPage() {
               onKeyDown={(event) => event.stopPropagation()}
               placeholder="Search projects"
               aria-label="Search projects by name"
-              className="w-full rounded-md border border-zinc-300 bg-white py-1.5 pl-8 pr-2 text-sm focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-blue-500"
+              className="w-full rounded border border-line bg-zinc-950 py-1.5 pl-8 pr-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-accent focus:outline-none"
             />
           </label>
 
           <div
-            className="flex items-center gap-1 rounded-md border border-zinc-200 bg-white p-0.5 dark:border-zinc-800 dark:bg-zinc-950"
+            className="flex items-center gap-1 rounded border border-line bg-zinc-900 p-0.5"
             role="group"
             aria-label="Sort projects"
           >
@@ -150,7 +150,7 @@ export default function DashboardPage() {
 
         <section className="mt-6" aria-label="Projects">
           {isLoading ? (
-            <p role="status" className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p role="status" className="text-sm text-zinc-500">
               Loading projects…
             </p>
           ) : error !== null ? (
@@ -158,7 +158,7 @@ export default function DashboardPage() {
           ) : summaries.length === 0 ? (
             <EmptyDashboard onCreate={() => setCreateOpen(true)} />
           ) : visibleProjects.length === 0 ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">No projects match “{query}”.</p>
+            <p className="text-sm text-zinc-500">No projects match “{query}”.</p>
           ) : (
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {visibleProjects.map((project) => (
@@ -211,9 +211,9 @@ export default function DashboardPage() {
 
 function EmptyDashboard({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-300 bg-white px-8 py-16 text-center dark:border-zinc-700 dark:bg-zinc-900">
-      <h2 className="text-base font-semibold">No projects yet</h2>
-      <p className="max-w-md text-sm text-zinc-500 dark:text-zinc-400">
+    <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-dashed border-line bg-zinc-900/60 px-8 py-16 text-center">
+      <h2 className="display text-lg">No projects yet</h2>
+      <p className="max-w-md text-sm text-zinc-400">
         Create your first project, then assemble navbars, heroes, text and buttons on a visual
         canvas — and export the finished website when you are done.
       </p>
@@ -221,7 +221,7 @@ function EmptyDashboard({ onCreate }: { onCreate: () => void }) {
         type="button"
         onClick={onCreate}
         data-testid="empty-state-create"
-        className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-white"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
         Create your first project
@@ -232,12 +232,12 @@ function EmptyDashboard({ onCreate }: { onCreate: () => void }) {
 
 function ErrorPanel({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/40">
-      <p className="text-sm text-red-800 dark:text-red-300">{message}</p>
+    <div className="rounded-lg border border-red-900 bg-red-950/40 px-4 py-3">
+      <p className="text-sm text-red-300">{message}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="mt-2 rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/40"
+        className="mt-2 rounded border border-red-800 px-3 py-1 text-xs font-medium text-red-300 hover:bg-red-900/40"
       >
         Try again
       </button>

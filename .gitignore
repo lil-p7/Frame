@@ -8,3 +8,4 @@ coverage
 .env.*
 FRAME_SPEC.md
 docs
+test-results

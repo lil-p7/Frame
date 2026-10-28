@@ -22,12 +22,12 @@ export function StatusBar({ page }: StatusBarProps) {
   const crumbs = path ?? [page.root];
 
   const breadcrumbButton =
-    "max-w-32 truncate rounded px-1 py-0.5 hover:bg-zinc-200 focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:hover:bg-zinc-800";
+    "max-w-32 truncate rounded px-1 py-0.5 hover:bg-white/10 focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent";
 
   return (
     <footer
       data-testid="editor-status-bar"
-      className="flex h-6 shrink-0 items-center justify-between gap-4 border-t border-zinc-200 bg-white px-3 text-[11px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400"
+      className="flex h-6 shrink-0 items-center justify-between gap-4 border-t border-line bg-zinc-950 px-3 text-[11px] text-zinc-500"
     >
       <span className="tabular-nums">
         {viewportWidth}px · {Math.round(zoom * 100)}%
@@ -44,7 +44,7 @@ export function StatusBar({ page }: StatusBarProps) {
                 <span
                   className={
                     last && !isRoot
-                      ? "max-w-32 truncate rounded bg-blue-600/10 px-1 py-0.5 font-medium text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                      ? "max-w-32 truncate rounded bg-white/10 px-1 py-0.5 font-medium text-accent"
                       : "max-w-32 truncate px-1 py-0.5"
                   }
                   aria-current={last ? "true" : undefined}
@@ -65,7 +65,7 @@ export function StatusBar({ page }: StatusBarProps) {
           );
         })}
         {selectedNodeId === null && (
-          <span className="px-1 text-zinc-400 dark:text-zinc-500">· nothing selected</span>
+          <span className="px-1 text-zinc-600">· nothing selected</span>
         )}
       </nav>
 

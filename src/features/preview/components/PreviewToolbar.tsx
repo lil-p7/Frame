@@ -41,36 +41,36 @@ export function PreviewToolbar({ project, page, onSelectPage }: PreviewToolbarPr
 
   const resolvedWidth = resolveViewportWidth({ viewportSelection, customViewportWidth });
   const iconButton =
-    "inline-flex h-7 w-7 items-center justify-center rounded text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+    "inline-flex h-7 w-7 items-center justify-center rounded text-zinc-400 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent";
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-950">
+    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-zinc-950 px-3">
       <Link
         to={editorPath(project.id)}
         data-testid="back-to-editor"
-        className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+        className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
       >
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
         Back to editor
       </Link>
 
       <div className="flex min-w-0 flex-col">
-        <span className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+        <span className="truncate text-xs font-semibold text-zinc-100">
           {project.name}
         </span>
-        <span className="truncate text-[11px] text-zinc-500 dark:text-zinc-400" data-testid="preview-page-name">
+        <span className="truncate text-[11px] text-zinc-500" data-testid="preview-page-name">
           {page.name}
         </span>
       </div>
 
       <div className="flex flex-1 items-center justify-end gap-2">
         <label className="flex items-center gap-1.5">
-          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Page</span>
+          <span className="text-[11px] text-zinc-500">Page</span>
           <select
             value={page.id}
             onChange={(event) => onSelectPage(event.target.value)}
             aria-label="Preview page"
-            className="h-7 max-w-40 truncate rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            className="h-7 max-w-40 truncate rounded border border-line bg-zinc-900 px-1.5 text-xs text-zinc-200 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
           >
             {project.pages.map((candidate) => (
               <option key={candidate.id} value={candidate.id}>
@@ -81,7 +81,7 @@ export function PreviewToolbar({ project, page, onSelectPage }: PreviewToolbarPr
         </label>
 
         <div
-          className="flex items-center gap-0.5 rounded-md border border-zinc-200 p-0.5 dark:border-zinc-700"
+          className="flex items-center gap-0.5 rounded border border-line p-0.5"
           role="group"
           aria-label="Preview viewport"
         >
@@ -98,7 +98,7 @@ export function PreviewToolbar({ project, page, onSelectPage }: PreviewToolbarPr
                 className={cn(
                   iconButton,
                   active &&
-                    "bg-blue-600/10 text-blue-700 hover:bg-blue-600/15 hover:text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/25 dark:hover:text-blue-200",
+                    "bg-white/10 text-accent hover:bg-white/15 hover:text-accent",
                 )}
               >
                 <Icon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -108,7 +108,7 @@ export function PreviewToolbar({ project, page, onSelectPage }: PreviewToolbarPr
           })}
         </div>
 
-        <label className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+        <label className="flex items-center gap-1 text-xs text-zinc-500">
           <span className="sr-only">Preview viewport width in pixels</span>
           <input
             type="number"
@@ -121,7 +121,7 @@ export function PreviewToolbar({ project, page, onSelectPage }: PreviewToolbarPr
                 setCustomViewportWidth(parsed);
               }
             }}
-            className="h-7 w-16 rounded border border-zinc-200 bg-white px-1.5 text-center text-xs tabular-nums text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            className="h-7 w-16 rounded border border-line bg-zinc-900 px-1.5 text-center text-xs tabular-nums text-zinc-200 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
           />
           <span aria-hidden="true">px</span>
         </label>

@@ -30,16 +30,15 @@ interface PageMenuProps {
 type DialogState = { kind: "create" } | { kind: "rename" } | { kind: "delete" } | null;
 
 const menuItemClass =
-  "flex w-full cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 dark:data-[highlighted]:bg-zinc-800";
+  "flex w-full cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-sm text-zinc-300 outline-none data-[highlighted]:bg-white/10 disabled:pointer-events-none disabled:opacity-40";
 const destructiveItemClass = cn(
   menuItemClass,
-  "text-red-600 data-[highlighted]:bg-red-50 dark:text-red-400 dark:data-[highlighted]:bg-red-950/50",
+  "text-red-400 data-[highlighted]:bg-red-950/60",
 );
 
-const dialogOverlayClass =
-  "fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in-0";
+const dialogOverlayClass = "fixed inset-0 z-50 bg-black/70";
 const dialogContentClass =
-  "fixed top-1/2 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-200 bg-white p-4 shadow-xl focus:outline-none dark:border-zinc-800 dark:bg-zinc-900";
+  "fixed top-1/2 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-line bg-zinc-900 p-4 shadow-2xl focus:outline-none";
 
 export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
   const [dialog, setDialog] = useState<DialogState>(null);
@@ -91,7 +90,7 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
         <DropdownMenu.Trigger
           asChild
           aria-label="Page actions"
-          className="rounded-md p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+          className="rounded p-1 text-zinc-500 hover:bg-white/10 hover:text-zinc-200 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
         >
           <button type="button" title="Page actions" data-testid="page-menu-trigger">
             <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
@@ -101,7 +100,7 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
           <DropdownMenu.Content
             align="end"
             sideOffset={4}
-            className="z-50 min-w-[190px] rounded-lg border border-zinc-200 bg-white p-1 shadow-md focus:outline-none dark:border-zinc-800 dark:bg-zinc-900"
+            className="z-50 min-w-[190px] rounded-lg border border-line bg-zinc-800 p-1 shadow-xl focus:outline-none"
           >
             <DropdownMenu.Item
               className={menuItemClass}
@@ -128,7 +127,7 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
               Rename page…
             </DropdownMenu.Item>
 
-            <DropdownMenu.Separator className="my-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+            <DropdownMenu.Separator className="my-1 h-px bg-white/10" />
 
             <DropdownMenu.Item
               className={menuItemClass}
@@ -149,7 +148,7 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
               Move page down
             </DropdownMenu.Item>
 
-            <DropdownMenu.Separator className="my-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+            <DropdownMenu.Separator className="my-1 h-px bg-white/10" />
 
             <DropdownMenu.Item
               className={destructiveItemClass}
@@ -173,10 +172,10 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
         <Dialog.Portal>
           <Dialog.Overlay className={dialogOverlayClass} />
           <Dialog.Content className={dialogContentClass} data-testid="page-name-dialog">
-            <Dialog.Title className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            <Dialog.Title className="text-sm font-semibold text-zinc-100">
               {dialog?.kind === "rename" ? "Rename page" : "New page"}
             </Dialog.Title>
-            <Dialog.Description className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <Dialog.Description className="mt-1 text-xs text-zinc-400">
               {dialog?.kind === "rename"
                 ? "The page keeps its content; the URL slug updates separately."
                 : "Create an empty page in this project."}
@@ -194,10 +193,10 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
               onKeyDown={(event) => {
                 if (event.key === "Enter") void submitName();
               }}
-              className="mt-3 h-8 w-full rounded border border-zinc-300 bg-white px-2 text-sm text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              className="mt-3 h-8 w-full rounded border border-line bg-zinc-950 px-2 text-sm text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
             />
             {error !== null && (
-              <p role="alert" className="mt-1 text-xs text-red-600 dark:text-red-400">
+              <p role="alert" className="mt-1 text-xs text-red-400">
                 {error}
               </p>
             )}
@@ -205,7 +204,7 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
               <button
                 type="button"
                 onClick={() => setDialog(null)}
-                className="rounded border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className="rounded border border-line px-3 py-1.5 text-xs text-zinc-300 hover:bg-white/10"
               >
                 Cancel
               </button>
@@ -214,7 +213,7 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
                 data-testid="page-name-submit"
                 disabled={busy}
                 onClick={() => void submitName()}
-                className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="rounded bg-accent px-3 py-1.5 text-xs font-medium text-zinc-950 hover:bg-white disabled:opacity-50"
               >
                 {dialog?.kind === "rename" ? "Rename" : "Create"}
               </button>
@@ -232,17 +231,17 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
         <Dialog.Portal>
           <Dialog.Overlay className={dialogOverlayClass} />
           <Dialog.Content className={dialogContentClass} data-testid="page-delete-dialog">
-            <Dialog.Title className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            <Dialog.Title className="text-sm font-semibold text-zinc-100">
               Delete “{currentPage.name}”?
             </Dialog.Title>
-            <Dialog.Description className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <Dialog.Description className="mt-1 text-xs text-zinc-400">
               This removes the page and its components from the project. It cannot be undone.
             </Dialog.Description>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setDialog(null)}
-                className="rounded border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className="rounded border border-line px-3 py-1.5 text-xs text-zinc-300 hover:bg-white/10"
               >
                 Cancel
               </button>
@@ -251,7 +250,7 @@ export function PageMenu({ pages, currentPage, commands }: PageMenuProps) {
                 data-testid="page-delete-confirm"
                 disabled={busy}
                 onClick={() => void confirmDelete()}
-                className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
               >
                 Delete page
               </button>

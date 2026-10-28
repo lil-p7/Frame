@@ -32,7 +32,7 @@ interface EditorToolbarProps {
 }
 
 const toolbarButton =
-  "inline-flex h-7 items-center justify-center rounded px-2 text-xs font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 disabled:pointer-events-none disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+  "inline-flex h-7 items-center justify-center rounded px-2 text-xs font-medium text-zinc-400 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:pointer-events-none disabled:opacity-40";
 
 /**
  * Top application toolbar (spec §8): identity + inline project rename +
@@ -140,18 +140,18 @@ export function EditorToolbar({
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-zinc-200 bg-white px-3 dark:border-zinc-800 dark:bg-zinc-950">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-zinc-950 px-3">
       {/* Left: identity, project name, save status */}
       <div className="flex min-w-0 items-center gap-2">
         <Link
           to="/"
           title="Back to projects"
-          className="inline-flex h-8 w-8 items-center justify-center rounded text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          className="inline-flex h-8 w-8 items-center justify-center rounded text-zinc-500 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           <span className="sr-only">Back to projects</span>
         </Link>
-        <FrameMark className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-500" />
+        <FrameMark className="h-5 w-5 shrink-0 text-accent" />
 
         {editingName ? (
           <div className="flex min-w-0 flex-col">
@@ -174,10 +174,10 @@ export function EditorToolbar({
                 if (validateProjectName(nameDraft) !== null) cancelEditing();
                 else void commitName();
               }}
-              className="h-7 w-44 rounded border border-zinc-300 bg-white px-2 text-sm font-semibold text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              className="h-7 w-44 rounded border border-line bg-zinc-900 px-2 text-sm font-semibold text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
             />
             {nameError !== null && (
-              <p role="alert" className="mt-1 text-[11px] text-red-600 dark:text-red-400">
+              <p role="alert" className="mt-1 text-[11px] text-red-400">
                 {nameError}
               </p>
             )}
@@ -187,7 +187,7 @@ export function EditorToolbar({
             type="button"
             onClick={startEditing}
             title="Rename project"
-            className="min-w-0 max-w-52 truncate rounded px-2 py-1 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            className="min-w-0 max-w-52 truncate rounded px-2 py-1 text-sm font-semibold text-zinc-100 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
           >
             {project.name}
           </button>
@@ -197,9 +197,9 @@ export function EditorToolbar({
           data-testid="save-status"
           className={cn(
             "inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px]",
-            saveStatus === "saved" && "text-zinc-500 dark:text-zinc-400",
-            saveStatus === "saving" && "text-zinc-500 dark:text-zinc-400",
-            saveStatus === "failed" && "text-red-600 dark:text-red-400",
+            saveStatus === "saved" && "text-zinc-500",
+            saveStatus === "saving" && "text-zinc-500",
+            saveStatus === "failed" && "text-red-400",
           )}
           role="status"
           title={
@@ -245,15 +245,15 @@ export function EditorToolbar({
           <span className="sr-only">Redo</span>
         </button>
 
-        <span className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" role="separator" />
+        <span className="mx-1 h-5 w-px bg-zinc-700" role="separator" />
 
         <label className="flex items-center gap-1.5">
-          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">Page</span>
+          <span className="text-[11px] text-zinc-500">Page</span>
           <select
             value={currentPage?.id ?? ""}
             onChange={(event) => setCurrentPage(event.target.value)}
             aria-label="Current page"
-            className="h-7 max-w-40 truncate rounded border border-zinc-200 bg-white px-1.5 text-xs text-zinc-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            className="h-7 max-w-40 truncate rounded border border-line bg-zinc-900 px-1.5 text-xs text-zinc-200 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
           >
             {pages.map((page) => (
               <option key={page.id} value={page.id}>
@@ -267,7 +267,7 @@ export function EditorToolbar({
           <PageMenu pages={pages} currentPage={currentPage} commands={pageCommands} />
         )}
 
-        <span className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" role="separator" />
+        <span className="mx-1 h-5 w-px bg-zinc-700" role="separator" />
 
         <ViewportControls onFitToWorkspace={onFitToWorkspace} />
       </div>

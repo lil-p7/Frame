@@ -61,27 +61,27 @@ function LibraryItemButton({
       {...listeners}
       {...attributes}
       className={cn(
-        "group flex w-full items-start gap-2 rounded px-2 py-1.5 text-left hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-blue-600 dark:hover:bg-zinc-800/70",
+        "group flex w-full items-start gap-2 rounded px-2 py-1.5 text-left hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-accent",
         isDragging && "opacity-40",
       )}
     >
-      <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-100 text-zinc-500 group-hover:bg-white group-hover:text-blue-600 dark:bg-zinc-800 dark:text-zinc-400 dark:group-hover:text-blue-400">
+      <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-800 text-zinc-400 group-hover:bg-white group-hover:text-accent">
         <Icon className="h-3 w-3" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">
+        <span className="flex items-center gap-1 text-xs font-medium text-zinc-200">
           {definition.label}
           <Plus
-            className="h-2.5 w-2.5 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-500"
+            className="h-2.5 w-2.5 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100"
             aria-hidden="true"
           />
         </span>
-        <span className="block truncate text-[10px] leading-snug text-zinc-400 dark:text-zinc-500">
+        <span className="block truncate text-[10px] leading-snug text-zinc-500">
           {definition.description}
         </span>
       </span>
       <GripVertical
-        className="mt-1 h-3 w-3 shrink-0 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-600"
+        className="mt-1 h-3 w-3 shrink-0 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100"
         aria-hidden="true"
       />
     </button>
@@ -100,10 +100,10 @@ export function ComponentSidebar({ page, commands }: ComponentSidebarProps) {
 
   const tabClass = (active: boolean) =>
     cn(
-      "flex-1 border-b-2 px-3 py-2 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600",
+      "flex-1 border-b-2 px-3 py-2 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent",
       active
-        ? "border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-300"
-        : "border-transparent text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
+        ? "border-accent text-accent"
+        : "border-transparent text-zinc-500 hover:text-zinc-100",
     );
 
   return (
@@ -111,7 +111,7 @@ export function ComponentSidebar({ page, commands }: ComponentSidebarProps) {
       <div
         role="tablist"
         aria-label="Sidebar sections"
-        className="flex border-b border-zinc-200 dark:border-zinc-800"
+        className="flex border-b border-line"
       >
         <button
           type="button"
@@ -170,7 +170,7 @@ function ComponentLibrary({ page, insertComponent }: ComponentLibraryProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" role="tabpanel" aria-label="Components">
-      <div className="border-b border-zinc-200 p-2.5 dark:border-zinc-800">
+      <div className="border-b border-line p-2.5">
         <div className="relative">
           <Search
             className="pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
@@ -182,10 +182,10 @@ function ComponentLibrary({ page, insertComponent }: ComponentLibraryProps) {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search components"
             aria-label="Search components"
-            className="h-7 w-full rounded border border-zinc-200 bg-white pr-2 pl-7 text-xs text-zinc-800 placeholder-zinc-400 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            className="h-7 w-full rounded border border-line bg-zinc-900 pr-2 pl-7 text-xs text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
           />
         </div>
-        <p className="mt-2 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 text-[11px] leading-snug text-zinc-500">
           Click a component to insert it into {targetLabel}, or drag it onto the canvas or a layer.
         </p>
       </div>
@@ -198,7 +198,7 @@ function ComponentLibrary({ page, insertComponent }: ComponentLibraryProps) {
           if (definitions.length === 0) return null;
           return (
             <section key={category} className="mb-3">
-              <h2 className="px-1 pb-1 text-[10px] font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">
+              <h2 className="px-1 pb-1 text-[10px] font-semibold tracking-wider text-zinc-500 uppercase">
                 {CATEGORY_LABELS[category]}
               </h2>
               <ul className="space-y-1">
@@ -217,7 +217,7 @@ function ComponentLibrary({ page, insertComponent }: ComponentLibraryProps) {
               matches(definition.label, definition.type, definition.description),
             ).length === 0,
         ) && (
-          <p className="px-1 py-4 text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="px-1 py-4 text-xs text-zinc-500">
             No components match “{query.trim()}”.
           </p>
         )}

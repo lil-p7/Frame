@@ -86,11 +86,11 @@ export function PropertiesInspector({
     return (
       <div className="flex h-full flex-col gap-3 p-4" data-testid="inspector-empty">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
             Properties
           </h2>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">Nothing selected</p>
-          <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-zinc-300">Nothing selected</p>
+          <p className="text-xs leading-relaxed text-zinc-500">
             Click a component on the canvas or in the Layers panel to edit its properties.
           </p>
         </div>
@@ -135,15 +135,15 @@ export function PropertiesInspector({
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      <header className="flex items-center gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+      <header className="flex items-center gap-2 border-b border-line px-4 py-3">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-zinc-800 text-zinc-300">
           <Box className="h-4 w-4" aria-hidden="true" />
         </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold" data-testid="inspector-node-name">
             {node.name}
           </p>
-          <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+          <p className="truncate text-[11px] text-zinc-500">
             {definition?.label ?? node.type}
           </p>
         </div>
@@ -154,12 +154,12 @@ export function PropertiesInspector({
           <div
             data-testid="breakpoint-banner"
             role="note"
-            className="border-b border-blue-200 bg-blue-50/70 px-4 py-2 dark:border-blue-900 dark:bg-blue-950/30"
+            className="border-b border-line bg-white/5 px-4 py-2"
           >
-            <p className="text-[11px] font-medium text-blue-800 dark:text-blue-300">
+            <p className="text-[11px] font-medium text-accent">
               Editing {BREAKPOINT_LABELS[breakpoint]} styles
             </p>
-            <p className="mt-0.5 text-[10px] leading-snug text-blue-700/80 dark:text-blue-300/70">
+            <p className="mt-0.5 text-[10px] leading-snug text-accent/70">
               Applies at {BREAKPOINT_RANGES[breakpoint]}. Unchanged fields inherit the Desktop
               values; reset a field to remove its override.
             </p>
@@ -168,7 +168,7 @@ export function PropertiesInspector({
 
         {ancestors.length > 0 && (
           <p
-            className="break-words px-4 pt-3 text-[11px] text-zinc-500 dark:text-zinc-400"
+            className="break-words px-4 pt-3 text-[11px] text-zinc-500"
             data-testid="inspector-node-location"
           >
             {ancestors.join(" / ")}
@@ -180,12 +180,12 @@ export function PropertiesInspector({
           return (
             <section
               key={section}
-              className="border-b border-zinc-200/70 dark:border-zinc-800/70"
+              className="border-b border-line"
               data-testid={`section-${section}`}
             >
               <button
                 type="button"
-                className="flex w-full items-center gap-1 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                className="flex w-full items-center gap-1 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 hover:bg-white/5"
                 aria-expanded={!isCollapsed}
                 data-testid={`section-${section}-toggle`}
                 onClick={() =>
@@ -234,7 +234,7 @@ export function PropertiesInspector({
 
         {definition !== undefined && (
           <section className="flex flex-col gap-1.5 px-4 py-3" data-testid="inspector-actions">
-            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
               Actions
             </span>
             <InspectorActionButton
@@ -325,8 +325,8 @@ function InspectorActionButton({
       data-testid={testId}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900",
-        destructive && "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950",
+        "flex items-center gap-2 rounded border border-line px-2 py-1 text-xs text-zinc-300 hover:bg-white/5",
+        destructive && "text-red-400 hover:bg-red-950/60",
       )}
     >
       {icon}
@@ -346,10 +346,10 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <dt className="text-zinc-500 dark:text-zinc-400">{label}</dt>
+      <dt className="text-zinc-500">{label}</dt>
       <dd
         className={cn(
-          "max-w-40 truncate text-zinc-800 dark:text-zinc-200",
+          "max-w-40 truncate text-zinc-200",
           mono && "font-mono text-[11px]",
         )}
         title={value}
@@ -361,9 +361,9 @@ function DetailRow({
 }
 
 const settingsInputClass =
-  "h-7 w-full rounded border border-zinc-300 bg-white px-2 text-xs text-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
+  "h-7 w-full rounded border border-line bg-zinc-900 px-2 text-xs text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent";
 const settingsLabelClass =
-  "flex flex-col gap-0.5 text-[11px] font-medium text-zinc-600 dark:text-zinc-400";
+  "flex flex-col gap-0.5 text-[11px] font-medium text-zinc-400";
 
 /**
  * Page settings for the selected page (spec §20 page configuration), shown
@@ -374,10 +374,10 @@ const settingsLabelClass =
 function PageSettingsFields({ page, commands }: { page: FramePage; commands: PageCommands }) {
   return (
     <section
-      className="flex flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800"
+      className="flex flex-col gap-2 border-t border-line pt-3"
       data-testid="page-settings"
     >
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
         Page settings
       </h3>
       <SettingsField
@@ -521,11 +521,11 @@ function PageBackgroundField({
             setDraft(event.target.value);
             void commands.updatePageSettings({ backgroundColor: event.target.value });
           }}
-          className="h-7 w-8 shrink-0 cursor-pointer rounded border border-zinc-300 bg-transparent p-0 dark:border-zinc-700"
+          className="h-7 w-8 shrink-0 cursor-pointer rounded border border-line bg-transparent p-0"
         />
       </span>
       {error !== null && (
-        <span role="alert" className="text-[10px] text-red-600 dark:text-red-400">
+        <span role="alert" className="text-[10px] text-red-400">
           {error}
         </span>
       )}

@@ -316,10 +316,10 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
   }
 
   const railButton =
-    "flex w-6 shrink-0 items-center justify-center border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100";
+    "flex w-6 shrink-0 items-center justify-center border-line bg-zinc-950 text-zinc-500 hover:bg-white/5 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent";
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-zinc-100 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+    <div className="flex h-dvh flex-col overflow-hidden bg-zinc-950 text-zinc-100">
       <EditorToolbar
         project={project}
         repository={repository}
@@ -355,7 +355,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
             <>
               <aside
                 style={{ width: `${leftPanelWidth}px` }}
-                className="flex min-h-0 shrink-0 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                className="flex min-h-0 shrink-0 flex-col border-r border-line bg-zinc-950"
                 aria-label="Components and layers"
               >
                 <div className="flex min-h-0 flex-1">
@@ -366,7 +366,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
                     type="button"
                     onClick={toggleLeftPanel}
                     title="Collapse sidebar"
-                    className="flex w-6 shrink-0 items-center justify-center border-l border-zinc-200 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                    className="flex w-6 shrink-0 items-center justify-center border-l border-line text-zinc-500 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
                   >
                     <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                     <span className="sr-only">Collapse components and layers</span>
@@ -405,7 +405,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
               />
               <aside
                 style={{ width: `${rightPanelWidth}px` }}
-                className="flex min-h-0 shrink-0 flex-col border-l border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                className="flex min-h-0 shrink-0 flex-col border-l border-line bg-zinc-950"
                 aria-label="Properties inspector"
               >
                 <div className="flex min-h-0 flex-1">
@@ -413,7 +413,7 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
                     type="button"
                     onClick={toggleRightPanel}
                     title="Collapse inspector"
-                    className="flex w-6 shrink-0 items-center justify-center border-r border-zinc-200 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-blue-600 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                    className="flex w-6 shrink-0 items-center justify-center border-r border-line text-zinc-500 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
                   >
                     <ChevronRight className="h-4 w-4" aria-hidden="true" />
                     <span className="sr-only">Collapse inspector</span>
@@ -468,10 +468,10 @@ function DragOverlayCard({ payload, page }: { payload: DragPayload; page: FrameP
   return (
     <div
       data-testid="drag-overlay"
-      className="pointer-events-none flex items-center gap-1.5 rounded border border-blue-400 bg-white/95 px-2 py-1 text-xs font-medium text-zinc-800 shadow-lg dark:bg-zinc-900/95 dark:text-zinc-100"
+      className="pointer-events-none flex items-center gap-1.5 rounded border border-accent/40 bg-zinc-800/95 px-2 py-1 text-xs font-medium text-zinc-100 shadow-xl"
     >
       {Icon !== undefined && (
-        <Icon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+        <Icon className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
       )}
       {label}
     </div>

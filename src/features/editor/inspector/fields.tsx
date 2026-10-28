@@ -30,10 +30,10 @@ import { cn } from "@/lib/cn";
 const DEBOUNCE_MS = 400;
 
 const inputClass =
-  "w-full min-w-0 rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 focus:border-zinc-500 focus:outline-none";
+  "w-full min-w-0 rounded border border-line bg-zinc-900 px-2 py-1 text-xs text-zinc-100 focus:border-accent focus:outline-none";
 
 const rowClass = "flex flex-col gap-1";
-const labelClass = "text-[11px] font-medium text-zinc-600 dark:text-zinc-400 select-none";
+const labelClass = "text-[11px] font-medium text-zinc-400 select-none";
 
 /**
  * Local draft state shared by every text-shaped control.
@@ -182,8 +182,8 @@ export function InspectorFieldRow({
             className={cn(
               "rounded px-1 py-px text-[9px] font-medium uppercase tracking-wide",
               breakpointBadge === "override"
-                ? "bg-blue-600/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
-                : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
+                ? "bg-white/10 text-accent"
+                : "bg-zinc-800 text-zinc-400",
             )}
           >
             {breakpointBadge === "override" ? "Override" : "Inherited"}
@@ -194,7 +194,7 @@ export function InspectorFieldRow({
           data-testid={`${testKey}-reset`}
           disabled={!canReset}
           title={canReset ? `Reset ${field.label}` : "Inherited from Desktop — nothing to reset"}
-          className="ml-auto rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+          className="ml-auto rounded p-0.5 text-zinc-500 hover:bg-white/10 hover:text-zinc-200 disabled:pointer-events-none disabled:opacity-30"
           aria-label={`Reset ${field.label}`}
           onClick={() => onReset(field)}
         >
@@ -379,7 +379,7 @@ function LinkInput({
         ))}
       </select>
       {broken && (
-        <p data-testid={`${testKey}-broken`} className="text-[10px] text-red-600 dark:text-red-400">
+        <p data-testid={`${testKey}-broken`} className="text-[10px] text-red-400">
           This page no longer exists — choose another destination.
         </p>
       )}
@@ -423,7 +423,7 @@ function AssetInput({
         onCommitParsed={commit}
       />
       <div className="flex items-center gap-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded border border-line bg-zinc-800">
           {previewSrc !== null && previewSrc !== "" ? (
             <img
               src={previewSrc}
@@ -435,7 +435,7 @@ function AssetInput({
             <Image className="h-4 w-4 text-zinc-400" aria-hidden="true" />
           )}
         </span>
-        <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-blue-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800">
+        <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-line px-2 py-1 text-[11px] font-medium text-zinc-300 hover:bg-white/5 focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-accent">
           <Upload className="h-3 w-3" aria-hidden="true" />
           {key !== null ? "Replace" : "Upload"}
           <input
@@ -455,13 +455,13 @@ function AssetInput({
           data-testid={`${testKey}-remove`}
           disabled={committed === null || committed === ""}
           onClick={() => commit("")}
-          className="rounded border border-zinc-200 px-2 py-1 text-[11px] text-zinc-500 hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          className="rounded border border-line px-2 py-1 text-[11px] text-zinc-400 hover:bg-white/5 disabled:pointer-events-none disabled:opacity-40"
         >
           Remove
         </button>
       </div>
       {key !== null && (
-        <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+        <p className="text-[10px] text-zinc-500">
           Uploaded image — stored with this project.
         </p>
       )}
@@ -562,14 +562,14 @@ function OpacityInput({
         type="range"
         data-testid={`${testKey}-range`}
         id={`${testKey}-input`}
-        className="h-1 flex-1 accent-zinc-700"
+        className="h-1 flex-1 accent-accent"
         min={0}
         max={1}
         step={0.05}
         value={raw ?? 1}
         onChange={(event) => commit(Number(event.target.value))}
       />
-      <span className="w-8 text-right text-[11px] tabular-nums text-zinc-600 dark:text-zinc-300">
+      <span className="w-8 text-right text-[11px] tabular-nums text-zinc-300">
         {raw === null ? "100%" : `${Math.round(raw * 100)}%`}
       </span>
     </div>
@@ -652,7 +652,7 @@ function ColorInput({
         type="color"
         data-testid={`${testKey}-picker`}
         aria-label="Pick color"
-        className="h-6 w-8 shrink-0 cursor-pointer rounded border border-zinc-300 bg-transparent p-0 dark:border-zinc-700"
+        className="h-6 w-8 shrink-0 cursor-pointer rounded border border-line bg-transparent p-0"
         value={colorPickerValue(committed)}
         onChange={(event) => {
           setDraft(event.target.value);
@@ -795,8 +795,8 @@ function ColumnsInput({
           className={cn(
             "rounded border py-0.5 text-center text-[11px] tabular-nums",
             count === n
-              ? "border-zinc-700 bg-zinc-700 text-white dark:border-zinc-300 dark:bg-zinc-200 dark:text-zinc-900"
-              : "border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800",
+              ? "border-accent bg-accent text-zinc-950"
+              : "border-line text-zinc-300 hover:bg-white/5",
           )}
           aria-pressed={count === n}
           onClick={() => commit(`repeat(${n}, minmax(0, 1fr))`)}

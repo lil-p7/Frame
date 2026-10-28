@@ -21,14 +21,14 @@ export function DeleteProjectDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-zinc-950/50" />
+        <Dialog.Overlay className="fixed inset-0 bg-black/70 backdrop-blur-[2px]" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-200 bg-white p-5 shadow-lg focus:outline-none dark:border-zinc-800 dark:bg-zinc-900"
+          className="fixed left-1/2 top-1/2 w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-line bg-zinc-900 p-5 shadow-2xl focus:outline-none"
           aria-describedby={undefined}
         >
-          <Dialog.Title className="text-base font-semibold">Delete project</Dialog.Title>
+          <Dialog.Title className="display text-lg text-zinc-100">Delete project</Dialog.Title>
 
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+          <p className="mt-2 text-sm text-zinc-400">
             Delete <strong data-testid="delete-project-name">{project.name}</strong>? This
             permanently removes the project and its pages. This action cannot be undone.
           </p>
@@ -37,7 +37,7 @@ export function DeleteProjectDialog({
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                className="rounded border border-line px-3 py-1.5 text-sm text-zinc-300 hover:bg-white/10"
               >
                 Cancel
               </button>
@@ -47,7 +47,7 @@ export function DeleteProjectDialog({
                 type="button"
                 onClick={() => onDelete(project.id)}
                 data-testid="confirm-delete"
-                className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                className="inline-flex items-center gap-1.5 rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                 Delete permanently

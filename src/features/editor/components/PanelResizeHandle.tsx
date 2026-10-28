@@ -52,8 +52,8 @@ export function PanelResizeHandle({ side, onResizeDelta }: PanelResizeHandleProp
         if (event.key === "ArrowRight") onResizeDelta(side === "left" ? step : -step);
       }}
       className={cn(
-        "w-1 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-blue-600/40 focus-visible:bg-blue-600/60 focus-visible:outline-none",
-        dragging && "bg-blue-600/60",
+        "w-1 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-accent/40 focus-visible:bg-accent/60 focus-visible:outline-none",
+        dragging && "bg-accent/60",
       )}
     />
   );

@@ -78,7 +78,7 @@ export function CanvasWorkspace({
       data-testid="canvas-workspace"
       role="presentation"
       onClick={() => selectNode(null)}
-      className="relative h-full min-w-0 flex-1 overflow-auto bg-zinc-200 p-8 dark:bg-zinc-900"
+      className="relative h-full min-w-0 flex-1 overflow-auto bg-zinc-900 p-8"
       style={{ display: "flex", alignItems: "flex-start", justifyContent: "center" }}
     >
       {/*
@@ -95,9 +95,9 @@ export function CanvasWorkspace({
           backgroundColor: page.settings.backgroundColor,
         }}
         className={cn(
-          "min-h-[640px] shrink-0 shadow-lg ring-1 ring-zinc-300/80 dark:ring-zinc-700",
+          "min-h-[640px] shrink-0 shadow-lg ring-1 ring-zinc-700",
           // Drop indicator: "lands at the end of the page" (§15).
-          pageZoneActive && "ring-2 ring-blue-500/70",
+          pageZoneActive && "ring-2 ring-accent/70",
         )}
       >
         {page.root.children.length === 0 ? (
@@ -105,10 +105,10 @@ export function CanvasWorkspace({
             data-testid="canvas-empty-state"
             className="flex h-full min-h-[640px] flex-col items-center justify-center gap-2 px-8 text-center"
           >
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
+            <p className="text-sm font-medium text-zinc-800">
               This page is empty
             </p>
-            <p className="max-w-sm text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            <p className="max-w-sm text-xs leading-relaxed text-zinc-600">
               Add components from the Components tab in the left sidebar, or start with a section:
             </p>
             {onInsertFirstSection !== undefined && (
@@ -116,7 +116,7 @@ export function CanvasWorkspace({
                 type="button"
                 data-testid="canvas-insert-section"
                 onClick={onInsertFirstSection}
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                className="rounded-md bg-zinc-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-950"
               >
                 Insert a section
               </button>
@@ -237,11 +237,11 @@ function CanvasNodeView({
           data-testid={`canvas-drop-${indicator}`}
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute left-0 right-0 z-20 rounded bg-blue-500",
+            "pointer-events-none absolute left-0 right-0 z-20 rounded bg-zinc-950",
             indicator === "before" && "-top-1 h-1",
             indicator === "after" && "-bottom-1 h-1",
             indicator === "inside" &&
-              "inset-0 h-auto rounded-sm bg-transparent ring-2 ring-blue-500/70",
+              "inset-0 h-auto rounded-sm bg-transparent ring-2 ring-zinc-950/70",
           )}
         />
       )}
@@ -288,7 +288,7 @@ function UnknownComponentView({ node }: { node: FrameNode }) {
   return (
     <div
       data-testid="unknown-component"
-      className="rounded-sm border border-dashed border-amber-500/80 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+      className="rounded-sm border border-dashed border-amber-600/80 bg-amber-50 px-3 py-2 text-xs text-amber-800"
     >
       Unknown component <span className="font-mono">{node.type}</span> — kept as-is so no data is
       lost. Remove it or open this project with a version that supports it.

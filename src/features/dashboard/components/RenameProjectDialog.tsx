@@ -41,12 +41,12 @@ export function RenameProjectDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-zinc-950/50" />
+        <Dialog.Overlay className="fixed inset-0 bg-black/70 backdrop-blur-[2px]" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-200 bg-white p-5 shadow-lg focus:outline-none dark:border-zinc-800 dark:bg-zinc-900"
+          className="fixed left-1/2 top-1/2 w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-line bg-zinc-900 p-5 shadow-2xl focus:outline-none"
           aria-describedby={undefined}
         >
-          <Dialog.Title className="text-base font-semibold">Rename project</Dialog.Title>
+          <Dialog.Title className="display text-lg text-zinc-100">Rename project</Dialog.Title>
 
           <form
             className="mt-4 flex flex-col gap-4"
@@ -57,7 +57,7 @@ export function RenameProjectDialog({
           >
             <input type="hidden" data-testid="rename-project-id" value={project.id} />
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Name</span>
+              <span className="text-xs font-medium uppercase tracking-wider text-zinc-400">Name</span>
               <input
                 type="text"
                 autoFocus
@@ -69,10 +69,10 @@ export function RenameProjectDialog({
                 onPaste={(event) => event.stopPropagation()}
                 onKeyDown={(event) => event.stopPropagation()}
                 aria-invalid={error !== null}
-                className="rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-blue-500"
+                className="rounded border border-line bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 focus:border-accent focus:outline-none"
               />
               {error !== null ? (
-                <span role="alert" className="text-xs text-red-600 dark:text-red-400">
+                <span role="alert" className="text-xs text-red-400">
                   {error}
                 </span>
               ) : null}
@@ -82,14 +82,14 @@ export function RenameProjectDialog({
               <Dialog.Close asChild>
                 <button
                   type="button"
-                  className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                  className="rounded border border-line px-3 py-1.5 text-sm text-zinc-300 hover:bg-white/10"
                 >
                   Cancel
                 </button>
               </Dialog.Close>
               <button
                 type="submit"
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-zinc-950 hover:bg-white"
               >
                 Save name
               </button>
