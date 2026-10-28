@@ -146,7 +146,9 @@ export function EditorShell({ project, repository, onProjectChanged }: EditorShe
   const setDragStart = useEditorStore((s) => s.setDragStart);
   const setDragOver = useEditorStore((s) => s.setDragOver);
   const setDragEnd = useEditorStore((s) => s.setDragEnd);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
 
   /**
    * Resolves a drag event into the component the pointer is over plus the

@@ -38,7 +38,7 @@ function LibraryItemButton({
   definition: ComponentDefinition;
   insertComponent: (type: string) => void;
 }) {
-  const { attributes, listeners, setActivatorNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
     id: `library-item:${definition.type}`,
     data: { kind: "library", componentType: definition.type } satisfies DragPayload,
   });
@@ -46,7 +46,13 @@ function LibraryItemButton({
   return (
     <button
       type="button"
-      ref={setActivatorNodeRef}
+      // The button is both the dragged node (measured for collision
+      // detection) and its activator — both refs must point at it or dnd-kit
+      // never resolves a drop target.
+      ref={(element) => {
+        setNodeRef(element);
+        setActivatorNodeRef(element);
+      }}
       data-testid="library-item"
       data-component-type={definition.type}
       title={definition.description}

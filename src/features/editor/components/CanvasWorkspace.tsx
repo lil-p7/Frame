@@ -59,11 +59,22 @@ export function CanvasWorkspace({
     id: "canvas-page",
     data: { zone: "canvas", nodeId: page.root.id },
   });
+  // The workspace around the document (grey padding, gaps between the frame
+  // and the panel) is an explicit drop zone for the page root too, so drops
+  // on empty canvas space resolve to a real target instead of being lost.
+  const { setNodeRef: setWorkspaceDroppableRef } = useDroppable({
+    id: "canvas-workspace",
+    data: { zone: "canvas", nodeId: page.root.id },
+  });
   const pageZoneActive = drag.zone === "canvas" && drag.overNodeId === page.root.id && drag.valid;
 
   return (
     <div
-      ref={scrollerRef}
+      ref={(element) => {
+        // Shared with the toolbar's fit-to-workspace measurement.
+        scrollerRef.current = element;
+        setWorkspaceDroppableRef(element);
+      }}
       data-testid="canvas-workspace"
       role="presentation"
       onClick={() => selectNode(null)}
@@ -245,14 +256,19 @@ function CanvasNodeView({
  * selection and ordinary clicks on the component itself keep working.
  */
 function CanvasDragHandle({ node }: { node: FrameNode }) {
-  const { attributes, listeners, setActivatorNodeRef } = useDraggable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef } = useDraggable({
     id: `canvas-handle:${node.id}`,
     data: { kind: "node", nodeId: node.id } satisfies DragPayload,
   });
   return (
     <button
       type="button"
-      ref={setActivatorNodeRef}
+      // Same element as the drag activator: it must also be the measured
+      // draggable node, otherwise drop targets never resolve (spec §15).
+      ref={(element) => {
+        setNodeRef(element);
+        setActivatorNodeRef(element);
+      }}
       data-testid="canvas-drag-handle"
       aria-label={`Drag ${node.name}`}
       {...listeners}

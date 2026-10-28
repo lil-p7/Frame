@@ -85,7 +85,7 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
     id: `layer-drop:${node.id}`,
     data: { zone: "layer", nodeId: node.id },
   });
-  const { attributes, listeners, setActivatorNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
     id: `layer-row:${node.id}`,
     data: { kind: "node", nodeId: node.id } satisfies DragPayload,
     disabled: isRoot || locked,
@@ -180,9 +180,14 @@ function LayerRow({ node, depth, page, isRoot = false, commands }: LayerRowProps
         )}
       >
         {!isRoot && (
-          <button
+<button
             type="button"
-            ref={setActivatorNodeRef}
+            // Grip is both the draggable node (measured by dnd-kit for drop
+            // resolution) and the drag activator.
+            ref={(element) => {
+              setNodeRef(element);
+              setActivatorNodeRef(element);
+            }}
             data-testid="layer-drag-handle"
             aria-label={`Drag ${node.name}`}
             disabled={locked}
