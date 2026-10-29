@@ -61,18 +61,18 @@ function LibraryItemButton({
       {...listeners}
       {...attributes}
       className={cn(
-        "group flex w-full items-start gap-2 rounded px-2 py-1.5 text-left hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-accent",
+        "group flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-zinc-200 hover:bg-zinc-700 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-accent",
         isDragging && "opacity-40",
       )}
     >
-      <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-800 text-zinc-400 group-hover:bg-white group-hover:text-accent">
+      <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-800 text-zinc-400 transition-colors group-hover:bg-zinc-700 group-hover:text-zinc-100">
         <Icon className="h-3 w-3" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1 text-xs font-medium text-zinc-200">
+        <span className="flex items-center gap-1 text-xs font-medium">
           {definition.label}
           <Plus
-            className="h-2.5 w-2.5 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100"
+            className="h-2.5 w-2.5 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100"
             aria-hidden="true"
           />
         </span>
@@ -81,7 +81,7 @@ function LibraryItemButton({
         </span>
       </span>
       <GripVertical
-        className="mt-1 h-3 w-3 shrink-0 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100"
+        className="mt-1 h-3 w-3 shrink-0 text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100"
         aria-hidden="true"
       />
     </button>
@@ -102,17 +102,13 @@ export function ComponentSidebar({ page, commands }: ComponentSidebarProps) {
     cn(
       "flex-1 border-b-2 px-3 py-2 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent",
       active
-        ? "border-accent text-accent"
-        : "border-transparent text-zinc-500 hover:text-zinc-100",
+        ? "border-accent bg-zinc-800 text-zinc-100"
+        : "border-transparent text-zinc-400 hover:border-zinc-700 hover:bg-zinc-700 hover:text-zinc-100",
     );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div
-        role="tablist"
-        aria-label="Sidebar sections"
-        className="flex border-b border-line"
-      >
+      <div role="tablist" aria-label="Sidebar sections" className="flex border-b border-line">
         <button
           type="button"
           role="tab"
@@ -217,9 +213,7 @@ function ComponentLibrary({ page, insertComponent }: ComponentLibraryProps) {
               matches(definition.label, definition.type, definition.description),
             ).length === 0,
         ) && (
-          <p className="px-1 py-4 text-xs text-zinc-500">
-            No components match “{query.trim()}”.
-          </p>
+          <p className="px-1 py-4 text-xs text-zinc-500">No components match “{query.trim()}”.</p>
         )}
       </div>
     </div>

@@ -23,9 +23,7 @@ type SortMode = "recent" | "alphabetical";
 
 const sortButtonClass = (selected: boolean): string =>
   `rounded px-2.5 py-1 text-xs ${
-    selected
-      ? "bg-white/10 text-zinc-100"
-      : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+    selected ? "bg-white/10 text-zinc-100" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
   }`;
 
 export default function DashboardPage() {
@@ -100,7 +98,17 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-zinc-950">
       <DashboardHeader onNewProject={() => setCreateOpen(true)} />
 
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="relative isolate mx-auto min-h-[calc(100vh-3.5rem)] max-w-5xl overflow-hidden px-6 py-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[min(1000px,100vh)] overflow-hidden"
+        >
+          <img
+            src="/images/frame-dashboard-bg.jpg"
+            alt=""
+            className="absolute right-0 top-[20vh] h-[min(1000px,100vh)] w-auto max-w-none translate-x-[18%] object-contain object-top opacity-40 [mask-image:linear-gradient(to_right,transparent_0%,black_18%,black_82%,transparent_100%)] sm:translate-x-0 sm:opacity-60 md:top-0"
+          />
+        </div>
         <h1 className="display text-[26px] leading-tight text-zinc-100">Your projects</h1>
         <p className="mt-1.5 max-w-md text-sm text-zinc-400">
           Build responsive web pages by assembling components on a canvas.
@@ -179,9 +187,7 @@ export default function DashboardPage() {
       <CreateProjectDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreate={(name, description, starter) =>
-          void handleCreate(name, description, starter)
-        }
+        onCreate={(name, description, starter) => void handleCreate(name, description, starter)}
       />
       <RenameProjectDialog
         project={renaming}
